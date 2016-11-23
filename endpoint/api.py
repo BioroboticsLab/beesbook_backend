@@ -1,11 +1,9 @@
 from flask import Flask
 from flask import abort
 from flask import request
-import os
-
 from flask import send_file
-
-import endpoint.config as config
+import os
+import config
 
 app = Flask(__name__)
 video_dict = {}  # maps video filenames to their path
