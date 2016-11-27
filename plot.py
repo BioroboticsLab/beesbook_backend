@@ -14,7 +14,7 @@ def download_file(url, dl_path):
 
     with open(dl_path, 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024):
-            if chunk: # filter out keep-alive new chunks
+            if chunk:  # filter out keep-alive new chunks
                 f.write(chunk)
 
     return r.status_code
@@ -37,7 +37,7 @@ def plot_frame(frame_container, frame):
 
     video_name = frame_container.dataSources[0].filename
     name, ext = os.path.splitext(video_name)
-    img_path = ('{}/'+config.img_name).format(config.FRAMES_DIR, name, frame)
+    img_path = ('{}/' + config.img_name).format(config.FRAMES_DIR, name, frame)
 
     if not os.path.exists(img_path):
         u = config.IMAGE_ENDPOINT.format(video_name=video_name, frame=frame)
@@ -72,12 +72,7 @@ def plot_video(frame_container, left_frame, right_frame, width=None, height=None
         if status_code != 200:
             raise Exception('Error on serverside')
 
-
-    return HTML('''
-    <video style='margin: 0 auto;' width="{width}" height="{height}" controls>
-        <source src="{src}" type="video/mp4">
-    </video>
-    '''.format(
+    return HTML(config.VIDEO_HTML.format(
         src=video_path,
         width=width or config.width,
         height=height or config.height

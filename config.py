@@ -23,6 +23,12 @@ FRAMES_DIR = 'frame_media'
 width = 800
 height = 600
 
+VIDEO_HTML = """
+<video style='margin: 0 auto;' width="{width}" height="{height}" controls>
+    <source src="{src}" type="video/mp4">
+</video>
+"""
+
 # #### shared config #### #
 img_name = '{}-frame_{}.png'
 video_name = '{name}-frame_{left_frame}-{right_frame}.mp4'
