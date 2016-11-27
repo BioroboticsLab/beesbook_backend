@@ -6,7 +6,7 @@ ffmpeg_frame = 'ffmpeg -v 24 -i {input_path} -vf "select=gte(n\,{frame})" -vfram
 ffmpeg_video = ' '.join([
     'ffmpeg -v 24',  # only show warnings or higher
     '-i {input_path}',  # input
-    '-vf "select=gte(n\,{left_frame})" -vframes {right_frame}',  # subset selection
+    '-vf "select=gte(n\,{left_frame}),setpts=PTS-STARTPTS" -vframes {number_of_frames}',  # subset selection
     '-crf 28',  # quality
     '-c:v h264',  # encoder
     '-pix_fmt yuv420p',  # squash warning

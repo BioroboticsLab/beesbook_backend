@@ -46,10 +46,10 @@ def get_frame():
 
 @app.route('/get_video', methods=['GET'])
 def get_video():
-    left_frame = request.args.get('left_frame', '')
-    right_frame = request.args.get('right_frame', '')
+    left_frame = int(request.args.get('left_frame', '-1'))
+    right_frame = int(request.args.get('right_frame', '-1'))
     filename = request.args.get('filename', '')
-    if not left_frame and not right_frame and not filename:
+    if left_frame == -1 or right_frame == -1 or filename == '':
         abort(400)
 
     name, ext = os.path.splitext(filename)
@@ -66,7 +66,7 @@ def get_video():
         cmd = config.ffmpeg_video.format(
             input_path=input_path,
             left_frame=left_frame,
-            right_frame=right_frame,
+            number_of_frames=right_frame - left_frame,
             output_path=output_path
         )
         check_output(cmd, shell=True)
