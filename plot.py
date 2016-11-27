@@ -48,7 +48,7 @@ def plot_frame(frame_container, frame):
     return plt.imshow(plt.imread(img_path))
 
 
-def plot_video(frame_container, left_frame, right_frame):
+def plot_video(frame_container, left_frame, right_frame, width=None, height=None):
     if len(frame_container.frames) <= right_frame or right_frame < 0:
         raise ValueError('Chosen frames are not valid.')
 
@@ -74,7 +74,11 @@ def plot_video(frame_container, left_frame, right_frame):
 
 
     return HTML('''
-    <video width="320" height="240" controls>
-        <source src="{}" type="video/mp4">
+    <video style='margin: 0 auto;' width="{width}" height="{height}" controls>
+        <source src="{src}" type="video/mp4">
     </video>
-    '''.format(video_path))
+    '''.format(
+        src=video_path,
+        width=width or config.width,
+        height=height or config.height
+    ))

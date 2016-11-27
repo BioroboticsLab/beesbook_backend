@@ -20,6 +20,8 @@ VIDEO_ENDPOINT = BASE + '/get_video?filename={video_name}&left_frame={left_frame
 API_IS_UP = BASE + '/up'
 FRAMES_DIR = 'frame_media'
 
+width = 800
+height = 600
 
 # #### shared config #### #
 img_name = '{}-frame_{}.png'
