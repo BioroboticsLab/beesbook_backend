@@ -1,5 +1,5 @@
 import os
-import urllib
+import requests
 
 import matplotlib.pyplot as plt
 from IPython.display import HTML
@@ -7,8 +7,21 @@ from IPython.display import HTML
 import config as config
 
 
+def download_file(url, dl_path):
+    r = requests.get(url, stream=True)
+    if r.status_code != 200:
+        return r.status_code
+
+    with open(dl_path, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=1024):
+            if chunk: # filter out keep-alive new chunks
+                f.write(chunk)
+
+    return r.status_code
+
+
 def prepare():
-    if urllib.urlopen(config.API_IS_UP).getcode() != 200:
+    if requests.get(config.API_IS_UP).status_code != 200:
         raise Exception('Cannot access endpoint. SSH Tunnel probably not running.\n'
                         '(ssh -N -L 5000:localhost:5000 [server_address])')
 
@@ -28,7 +41,9 @@ def plot_frame(frame_container, frame):
 
     if not os.path.exists(img_path):
         u = config.IMAGE_ENDPOINT.format(video_name=video_name, frame=frame)
-        urllib.urlretrieve(u, img_path)
+        status_code = download_file(u, img_path)
+        if status_code != 200:
+            raise Exception('Error on serverside')
 
     return plt.imshow(plt.imread(img_path))
 
@@ -53,7 +68,10 @@ def plot_video(frame_container, left_frame, right_frame):
 
     if not os.path.exists(video_path):
         u = config.VIDEO_ENDPOINT.format(video_name=video_name, left_frame=left_frame, right_frame=right_frame)
-        urllib.urlretrieve(u, video_path)
+        status_code = download_file(u, video_path)
+        if status_code != 200:
+            raise Exception('Error on serverside')
+
 
     return HTML('''
     <video width="320" height="240" controls>
