@@ -1,9 +1,6 @@
-from flask import Flask
-from flask import abort
-from flask import request
-from flask import send_file
+from flask import Flask, abort, request, send_file
 import os
-import config
+import bb_plotter.config as config
 from subprocess import check_output
 
 app = Flask(__name__)

@@ -4,7 +4,7 @@ import requests
 import matplotlib.pyplot as plt
 from IPython.display import HTML
 
-import config as config
+import bb_plotter.config as config
 
 
 def download_file(url, dl_path):
