@@ -1,7 +1,13 @@
+import uuid
 from subprocess import check_output
 import os
+import matplotlib
+matplotlib.use('Agg') # need to be executed before pyplot import, deactivates showing of plot in ipython
 import matplotlib.pyplot as plt
+
 import numpy as np
+
+
 
 from plotter import utils
 
@@ -15,7 +21,7 @@ else:
 def extract_frame(video_path, frame_index):
     name = utils.get_filename(video_path)
 
-    output_path = f'/tmp/{name}_{frame_index}.jpg'
+    output_path = f'/tmp/{name}_{frame_index}.png'
     cmd = config.ffmpeg_frame_cmd.format(**locals())
 
     if not os.path.exists(output_path):
@@ -53,9 +59,8 @@ def plot_frame(video_path, frame_index, x: list, y:list, rot:list):
     rotations = np.array([rotate_direction_vec(rot) for rot in rot])
     plt.quiver(y, x, rotations[:, 1], rotations[:, 0], scale=500, color='yellow')
 
-
     name = utils.get_filename(video_path)
-    id = utils.uuid()
-    output_path = f'/tmp/{name}-plot-{id}'
+    id = str(uuid.uuid4())
+    output_path = f'/tmp/{name}-plot-{id}.png'
     figure.savefig(output_path)
     return output_path
