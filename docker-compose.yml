@@ -1,0 +1,11 @@
+version: "2"
+
+services:
+  postgres:
+    image: postgres:9.6
+    ports:
+      - "5432:5432"
+    volumes_from:
+      - container:postgres_data
+
+# execute once: docker create -v /var/lib/postgresql --name postgres_data postgres:9.6

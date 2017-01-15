@@ -1,0 +1,25 @@
+from django.core.management.base import BaseCommand, CommandError
+from plotter.models import FrameContainer, Frame, Video
+from bb_binary import Repository, load_frame_container
+
+
+class Command(BaseCommand):
+    help = 'Reads a repo and saves all relevant information'
+
+    def add_arguments(self, parser):
+        parser.add_argument('repo_path', type=str)
+
+    def handle(self, *args, **options):
+        repo = Repository(options['repo_path'])
+        for fn in repo.iter_fnames():
+            fc = load_frame_container(fn)
+            fco = FrameContainer(fc_id=fc.id, fc_path=fn, video_name=fc.dataSources[0].filename)
+            fco.save()
+
+            for frame in fc.frames:
+                f = Frame(fc=fco, frame_id=frame.id, index=frame.frameIdx)
+                f.save()
+
+
+
+# start with python manage.py fill_db repo_path

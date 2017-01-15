@@ -1,0 +1,5 @@
+-e git+https://github.com/BioroboticsLab/bb_binary.git@0.1#egg=bb_binary
+Django<1.11
+psycopg2<2.7
+ipython>=5
+joblib>=0.11,<0.12
