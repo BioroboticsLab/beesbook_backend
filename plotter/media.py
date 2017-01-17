@@ -123,3 +123,36 @@ def plot_frame(frame, x, y, rot):
     figure.savefig(output_path)
     plt.close()
     return output_path
+
+
+@utils.filepath_cacher
+def plot_video(data):
+    """
+    Creates a video with information of a track
+    Args:
+        data (list): Contains a list of dictionaries
+
+    Returns:
+
+    """
+    from .models import Frame
+    # todo pre-extract all frames
+    # todo: command to combine frames kinda sucks, see /tmp/{uid}.mp4
+    uid = uuid.uuid4()
+    output_folder = f'/tmp/{uid}/'
+    os.makedirs(output_folder, exist_ok=True)
+    for i, d in enumerate(data):
+        frame = Frame.objects.get(frame_id=d['frame_id'])
+        path = plot_frame(frame, d['x'], d['y'], d['rot'])
+
+        output_path = os.path.join(output_folder, f'{i:04}.png')
+        shutil.copy(path, output_path)
+
+    input_path = os.path.join(output_folder, '%04d.png')
+    video_output_path = f'/tmp/{uid}.mp4'
+    cmd = config.ffmpeg_frames_to_video.format(input_path=input_path, output_path=video_output_path)
+    output = check_output(cmd, shell=True)
+    print('Output:', output)
+
+    return video_output_path
+
