@@ -97,17 +97,17 @@ def rotate_direction_vec(rotation):
 
 
 @utils.filepath_cacher
-def plot_frame(frame, x: list, y: list, rot: list):
+def plot_frame(frame, x, y, rot):
     """
 
     Args:
         frame (Frame):
-        x:
-        y:
-        rot:
+        x (list): list of x coordinates to plot
+        y (list): list of y coordinates to plot
+        rot (list): list of rotations to plot
 
     Returns:
-
+        path of the plotted frame
     """
     path = extract_single_frame(frame)
     figure = plt.figure()
