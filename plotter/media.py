@@ -4,7 +4,6 @@ from subprocess import check_output
 
 import matplotlib
 
-from plotter.models import Frame, FrameContainer
 
 matplotlib.use('Agg')  # need to be executed before pyplot import, deactivates showing of plot in ipython
 import matplotlib.pyplot as plt
@@ -20,15 +19,23 @@ else:
     from . import config
 
 
-def extract_frames(framecontainer: FrameContainer):
+def extract_frames(framecontainer):
     """
-    Extract multiple frames.
+    Extracts all frame-images of the corresponding video file of a FrameContainer.
+
+    Args:
+        framecontainer (FrameContainer): The FrameContainer which represents the video file from which the frames
+         should be extracted
+
+    Returns: Directory path of the extracted images
+
     """
     video_name = framecontainer.video_name
     video_path = framecontainer.video_path
     output_path = f'/tmp/{video_name}'
 
     # check if files already exist
+    from plotter.models import Frame
     if len(os.listdir(output_path)) == Frame.objects.filter(fc=framecontainer).count():
         return output_path
 
@@ -37,26 +44,29 @@ def extract_frames(framecontainer: FrameContainer):
     output = check_output(cmd, shell=True)
     print('output:', output)
 
-    frame_ids = [frame.frame_id for frame in Frame.objects.filter(fc=framecontainer).order_by('index')]
-    images = os.listdir(output_path)
-    for image_path, frame_id in zip(images, frame_ids):
-        os.replace(image_path, f'{output_path}/{frame_id}.png')
-
     return output_path
 
 
-def extract_single_frame(frame: Frame):
+def extract_single_frame(frame):
+    """
+    Extracts the image to a `Frame`-object.
+    Args:
+        frame (Frame): The frame which should be extracted.
+
+    Returns: The path to the image.
+
+    """
     video_name = frame.fc.video_name
     video_path = frame.fc.video_path
 
-    output_path = f'/tmp/{video_name}/{frame.id}.png'
-    cmd = config.ffmpeg_extract_single_frame.format(
-        video_path=video_path,
-        frame_index=frame.index,
-        output_path=output_path
-    )
+    output_path = f'/tmp/{video_name}/{frame.index}.png'
 
     if not os.path.exists(output_path):
+        cmd = config.ffmpeg_extract_single_frame.format(
+            video_path=video_path,
+            frame_index=frame.index,
+            output_path=output_path
+        )
         output = check_output(cmd, shell=True)
         print('output:', output)
 
@@ -87,7 +97,18 @@ def rotate_direction_vec(rotation):
 
 
 @utils.filepath_cacher
-def plot_frame(frame: Frame, x: list, y: list, rot: list):
+def plot_frame(frame, x: list, y: list, rot: list):
+    """
+
+    Args:
+        frame (Frame):
+        x:
+        y:
+        rot:
+
+    Returns:
+
+    """
     path = extract_single_frame(frame)
     figure = plt.figure()
     plt.imshow(plt.imread(path))
