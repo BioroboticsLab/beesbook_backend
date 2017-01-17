@@ -8,5 +8,5 @@ ffmpeg_video = ' '.join([
     '{output_path}'  # output path
 ])
 
-ffmpeg_extract_all_frames = 'ffmpeg -v 24 -i {video_path} {output_path}/image_%04d.png'
+ffmpeg_extract_all_frames = 'ffmpeg -v 24 -i {video_path} {output_path}/%04d.png'
 ffmpeg_extract_single_frame = 'ffmpeg -v 24 -i {video_path} -vf "select=gte(n\,{frame_index})" -vframes 1 {output_path}'

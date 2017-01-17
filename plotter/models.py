@@ -35,8 +35,7 @@ class Frame(models.Model):
         'single' extracts just that frame and returns the path.
         'all' extracts all frames of the containing framecontainer and returns the single frame path.
         """
-
-        path = '/tmp/{video_name}/{frame_id}.png'
+        path = f'/tmp/{self.fc.video_name}/{self.index:04}.png'
         if os.path.exists(path):
             return path
 

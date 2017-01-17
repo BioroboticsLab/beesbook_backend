@@ -59,7 +59,7 @@ def extract_single_frame(frame):
     video_name = frame.fc.video_name
     video_path = frame.fc.video_path
 
-    output_path = f'/tmp/{video_name}/{frame.index}.png'
+    output_path = f'/tmp/{video_name}/{frame.index:04}.png'
 
     if not os.path.exists(output_path):
         cmd = config.ffmpeg_extract_single_frame.format(
