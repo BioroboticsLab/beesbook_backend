@@ -120,4 +120,5 @@ def plot_frame(frame, x: list, y: list, rot: list):
     uid = uuid.uuid4()
     output_path = f'/tmp/{video_name}-plot-{uid}.png'
     figure.savefig(output_path)
+    plt.close()
     return output_path
