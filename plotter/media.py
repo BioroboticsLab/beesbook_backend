@@ -3,7 +3,7 @@ import uuid
 from subprocess import check_output
 
 import matplotlib
-
+import shutil
 
 matplotlib.use('Agg')  # need to be executed before pyplot import, deactivates showing of plot in ipython
 import matplotlib.pyplot as plt
@@ -35,9 +35,10 @@ def extract_frames(framecontainer):
     output_path = f'/tmp/{video_name}'
 
     # check if files already exist
-    from plotter.models import Frame
-    if len(os.listdir(output_path)) == Frame.objects.filter(fc=framecontainer).count():
-        return output_path
+    if os.path.exists(output_path):
+        from plotter.models import Frame
+        if len(os.listdir(output_path)) == Frame.objects.filter(fc=framecontainer).count():
+            return output_path
 
     os.makedirs(output_path, exist_ok=True)
     cmd = config.ffmpeg_extract_all_frames.format(video_path=video_path, output_path=output_path)
