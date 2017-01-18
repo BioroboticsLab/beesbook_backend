@@ -145,7 +145,7 @@ def plot_video(data):
         path = plot_frame(frame, d['x'], d['y'], d['rot'])
 
         output_path = os.path.join(output_folder, f'{i:04}.png')
-        shutil.copy(path, output_path)
+        shutil.move(path, output_path)
 
     input_path = os.path.join(output_folder, '%04d.png')
     video_output_path = f'/tmp/{uid}.mp4'
@@ -153,5 +153,6 @@ def plot_video(data):
     output = check_output(cmd, shell=True)
     print('Output:', output)
 
-    return video_output_path
+    shutil.rmtree(output_folder)  # deleting all temporary files
 
+    return video_output_path
