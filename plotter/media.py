@@ -1,7 +1,6 @@
 import os
 import uuid
 from subprocess import check_output
-
 import matplotlib
 import shutil
 
@@ -111,16 +110,16 @@ def plot_frame(frame, x, y, rot):
         path of the plotted frame
     """
     path = extract_single_frame(frame)
-    figure = plt.figure()
-    plt.imshow(plt.imread(path))
-    plt.axis('off')
+    fig, ax = plt.subplots()
+    fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
+    ax.imshow(plt.imread(path))
     rotations = np.array([rotate_direction_vec(rot) for rot in rot])
-    plt.quiver(y, x, rotations[:, 1], rotations[:, 0], scale=500, color='yellow')
+    ax.quiver(y, x, rotations[:, 1], rotations[:, 0], scale=500, color='yellow')
 
     video_name = frame.fc.video_name
     uid = uuid.uuid4()
     output_path = f'/tmp/{video_name}-plot-{uid}.png'
-    figure.savefig(output_path)
+    fig.savefig(output_path, dpi=200)
     plt.close()
     return output_path
 
