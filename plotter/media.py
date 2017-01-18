@@ -18,6 +18,32 @@ else:
     from . import config
 
 
+def extract_single_frame(frame):
+    """
+    Extracts the image to a `Frame`-object.
+    Args:
+        frame (Frame): The frame which should be extracted.
+
+    Returns: The path to the image.
+
+    """
+    video_name = frame.fc.video_name
+    video_path = frame.fc.video_path
+
+    output_path = f'/tmp/{video_name}/{frame.index:04}.png'
+
+    if not os.path.exists(output_path):
+        cmd = config.ffmpeg_extract_single_frame.format(
+            video_path=video_path,
+            frame_index=frame.index,
+            output_path=output_path
+        )
+        output = check_output(cmd, shell=True)
+        print('output:', output)
+
+    return output_path
+
+
 def extract_frames(framecontainer):
     """
     Extracts all frame-images of the corresponding video file of a FrameContainer.
@@ -47,33 +73,6 @@ def extract_frames(framecontainer):
     return output_path
 
 
-def extract_single_frame(frame):
-    """
-    Extracts the image to a `Frame`-object.
-    Args:
-        frame (Frame): The frame which should be extracted.
-
-    Returns: The path to the image.
-
-    """
-    video_name = frame.fc.video_name
-    video_path = frame.fc.video_path
-
-    output_path = f'/tmp/{video_name}/{frame.index:04}.png'
-
-    if not os.path.exists(output_path):
-        cmd = config.ffmpeg_extract_single_frame.format(
-            video_path=video_path,
-            frame_index=frame.index,
-            output_path=output_path
-        )
-        output = check_output(cmd, shell=True)
-        print('output:', output)
-
-    return output_path
-
-
-@utils.filepath_cacher
 def extract_video(frames):
     """
     Extracts a number of frames and makes a video.
