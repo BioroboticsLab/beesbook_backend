@@ -61,8 +61,7 @@ def extract_frames(framecontainer):
 
     # check if files already exist
     if os.path.exists(output_path):
-        from plotter.models import Frame
-        if len(os.listdir(output_path)) == Frame.objects.filter(fc=framecontainer).count():
+        if len(os.listdir(output_path)) == framecontainer.frame_set.count():
             return output_path
 
     os.makedirs(output_path, exist_ok=True)
