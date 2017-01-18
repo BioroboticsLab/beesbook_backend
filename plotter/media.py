@@ -73,16 +73,31 @@ def extract_single_frame(frame):
     return output_path
 
 
-# todo refactor, make it use django objects
-def extract_video_subset(video_path, left_frame_idx, right_frame_idx):
-    number_of_frames = right_frame_idx - left_frame_idx
-    name = utils.get_filename(video_path)
+@utils.filepath_cacher
+def extract_video(frames):
+    """
+    Extracts a number of frames and makes a video.
+    Args:
+        frames (list:Frame): list of frames
 
-    output_path = f'/tmp/{name}-{left_frame_idx}-{right_frame_idx}.mp4'
+    Returns:
 
-    if not os.path.exists(output_path):
-        cmd = config.ffmpeg_video.format(**locals())
-        check_output(cmd, shell=True)
+    """
+    uid = uuid.uuid4()
+    output_folder = f'/tmp/{uid}'
+    os.makedirs(output_folder, exist_ok=True)
+
+    for i, frame in enumerate(frames):
+        image_path = frame.get_image_path(extract='all')
+        output_path = os.path.join(output_folder, f'{i:04}.png')
+        shutil.copy(image_path, output_path)
+
+    cmd = config.ffmpeg_frames_to_video.format(
+        input_path=f'/tmp/{uid}/%04d.png',
+        output_path=f'/tmp/{uid}.mp4'
+    )
+    check_output(cmd, shell=True)
+    shutil.rmtree(output_folder)
 
     return output_path
 
@@ -135,13 +150,12 @@ def plot_video(data):
 
     """
     from .models import Frame
-    # todo pre-extract all frames
-    # todo: command to combine frames kinda sucks, see /tmp/{uid}.mp4
     uid = uuid.uuid4()
     output_folder = f'/tmp/{uid}/'
     os.makedirs(output_folder, exist_ok=True)
     for i, d in enumerate(data):
         frame = Frame.objects.get(frame_id=d['frame_id'])
+        extract_frames(frame.fc)  # pre extracts all frames out of this framecontainer
         path = plot_frame(frame, d['x'], d['y'], d['rot'])
 
         output_path = os.path.join(output_folder, f'{i:04}.png')
