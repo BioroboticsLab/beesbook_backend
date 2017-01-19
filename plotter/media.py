@@ -109,7 +109,6 @@ def rotate_direction_vec(rotation):
     return [np.around(normed_x, decimals=2), np.around(normed_y, decimals=2)]
 
 
-@utils.filepath_cacher
 def plot_frame(frame, x, y, rot):
     """
 
@@ -137,7 +136,6 @@ def plot_frame(frame, x, y, rot):
     return output_path
 
 
-@utils.filepath_cacher
 def plot_video(data):
     """
     Creates a video with information of a track
