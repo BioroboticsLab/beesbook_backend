@@ -27,11 +27,16 @@ def filepath_cacher(f):
     f = mem.cache(f)
 
     def check_file(*args, **kwargs):
+        if 'uncache' in kwargs:
+            uncache = kwargs.pop('uncache')
+        else:
+            uncache = False
+
         mem_object = f.call_and_shelve(*args, **kwargs)
         file_path = mem_object.get()
 
         # cached file_path does not exist anymore, clear cache and recompute
-        if not os.path.exists(file_path):
+        if not os.path.exists(file_path) or uncache:
             mem_object.clear()
             file_path = f(*args, **kwargs)
         return file_path
