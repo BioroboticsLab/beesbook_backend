@@ -4,3 +4,4 @@ psycopg2<2.7
 ipython>=5
 joblib>=0.10,<0.12
 matplotlib<1.6
+django-extensions<1.8
