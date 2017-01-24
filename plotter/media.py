@@ -37,6 +37,7 @@ def extract_single_frame(frame):
     video_name = frame.fc.video_name
     video_path = frame.fc.video_path
 
+    os.makedirs(f'/tmp/{video_name}/', exist_ok=True)
     output_path = f'/tmp/{video_name}/{frame.index:04}.png'
 
     if not os.path.exists(output_path):
