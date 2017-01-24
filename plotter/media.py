@@ -161,8 +161,7 @@ def plot_video(data):
     for i, d in enumerate(data):
         frame = Frame.objects.get(frame_id=d['frame_id'])
         extract_frames(frame.fc)  # pre extracts all frames out of this framecontainer
-        x, y = scale(d['x'], d['y'])
-        path = plot_frame(frame, x, y, d['rot'])
+        path = plot_frame(frame, d['x'], d['y'], d['rot'])
 
         output_path = os.path.join(output_folder, f'{i:04}.png')
         shutil.move(path, output_path)
