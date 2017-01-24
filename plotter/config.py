@@ -7,8 +7,15 @@ ffmpeg_video = ' '.join([
     '-pix_fmt yuv420p',  # squash warning
     '{output_path}'  # output path
 ])
+scale = '0.5'
 
-ffmpeg_extract_all_frames = 'ffmpeg -v 24 -i {video_path} -start_number 0 {output_path}/%04d.png'
-ffmpeg_extract_single_frame = 'ffmpeg -v 24 -i {video_path} -vf "select=gte(n\,{frame_index})" -vframes 1 {output_path}'
+ffmpeg_extract_all_frames = 'ffmpeg -v 24 -i {video_path} ' \
+                            '-start_number 0 ' \
+                            '-vf scale=iw*' + scale + ':ih*' + scale + ' ' \
+                            '{output_path}/%04d.png'
 
 ffmpeg_frames_to_video = 'ffmpeg -r 3 -i {input_path} -r 3 -vcodec libx264 {output_path}'
+ffmpeg_extract_single_frame = 'ffmpeg -v 24 -i {video_path} ' \
+                              '-vf "select=gte(n\,{frame_index}), scale=iw*' + scale + ':ih*' + scale + '" ' \
+                              '-vframes 1 {output_path}'
+

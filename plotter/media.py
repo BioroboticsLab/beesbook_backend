@@ -18,6 +18,13 @@ else:
     from . import config
 
 
+def scale(x, y):
+    scaling_constant = float(config.scale)
+    x = [int(int(xe) * scaling_constant) for xe in x]
+    y = [int(int(ye) * scaling_constant) for ye in y]
+    return x, y
+
+
 def extract_single_frame(frame):
     """
     Extracts the image to a `Frame`-object.
@@ -121,6 +128,7 @@ def plot_frame(frame, x, y, rot):
     Returns:
         path of the plotted frame
     """
+    x, y = scale(x, y)
     path = extract_single_frame(frame)
     fig, ax = plt.subplots()
     fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
@@ -152,7 +160,8 @@ def plot_video(data):
     for i, d in enumerate(data):
         frame = Frame.objects.get(frame_id=d['frame_id'])
         extract_frames(frame.fc)  # pre extracts all frames out of this framecontainer
-        path = plot_frame(frame, d['x'], d['y'], d['rot'])
+        x, y = scale(d['x'], d['y'])
+        path = plot_frame(frame, x, y, d['rot'])
 
         output_path = os.path.join(output_folder, f'{i:04}.png')
         shutil.move(path, output_path)
