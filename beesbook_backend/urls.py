@@ -19,5 +19,9 @@ from plotter import views
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^plotter/get_frame/$', views.get_frame)
+    url(r'^plotter/get_frame/$', views.get_frame),
+    url(r'^plotter/get_video/$', views.get_video),
+    url(r'^plotter/plot_frame/$', views.plot_frame),
+    url(r'^plotter/plot_video/$', views.plot_video),
+
 ]

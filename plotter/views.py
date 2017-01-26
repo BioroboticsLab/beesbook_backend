@@ -10,12 +10,20 @@ from django.views.decorators.csrf import csrf_exempt
 from plotter.models import Frame, FrameContainer
 
 
+@csrf_exempt
 def get_frame(request):
-    frame_id = request.GET.get('frame_id')
+    if request.method != 'POST':
+        raise HttpResponseBadRequest('Only POST requests allowed.')
+
+    frame_id = request.POST.get('frame_id')
     if frame_id is None:
         raise HttpResponseBadRequest('Parameter frame_id required')
     frame = Frame.objects.get(frame_id=frame_id)
-    video_path = frame.fc.video_path
+    path = frame.get_image_path(extract='single')
+
+    return HttpResponse(FileWrapper(open(path, 'rb')), content_type='image/png')
+
+
 @csrf_exempt
 def get_video(request):
     if request.method != 'POST':
@@ -41,4 +49,30 @@ def get_video(request):
     return HttpResponse(FileWrapper(open(path, 'rb')), content_type='video/mp4')
 
 
+@csrf_exempt
+def plot_frame(request):
+    if request.method != 'POST':
+        raise HttpResponseBadRequest('Only POST requests allowed.')
 
+    data_json = request.POST.get('data', None)
+    if not data_json:
+        raise HttpResponseBadRequest('`data` parameter required')
+
+    data = json.loads(data_json)
+    path = Frame.plot_frame(data['frame_id'], data['x'], data['y'], data['rot'])
+    return HttpResponse(FileWrapper(open(path, 'rb')), content_type='image/jpg')
+
+
+@csrf_exempt
+def plot_video(request):
+    if request.method != 'POST':
+        raise HttpResponseBadRequest('Only POST requests allowed.')
+
+    data_json = request.POST.get('data', None)
+
+    if not data_json:
+        raise HttpResponseBadRequest('`data` parameter required')
+
+    data = json.loads(data_json)
+    path = Frame.plot_video(data)
+    return HttpResponse(FileWrapper(open(path, 'rb')), content_type='video/mp4')
