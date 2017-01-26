@@ -20,8 +20,8 @@ else:
 
 def scale(x, y):
     scaling_constant = float(config.scale)
-    x = [int(int(xe) * scaling_constant) for xe in x]
-    y = [int(int(ye) * scaling_constant) for ye in y]
+    x = np.array([int(int(xe) * scaling_constant) for xe in x])
+    y = np.array([int(int(ye) * scaling_constant) for ye in y])
     return x, y
 
 
