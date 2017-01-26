@@ -98,14 +98,15 @@ def extract_video(frames):
         output_path = os.path.join(output_folder, f'{i:04}.jpg')
         shutil.copy(image_path, output_path)
 
+    output_video_path = f'/tmp/{uid}.mp4'
     cmd = config.ffmpeg_frames_to_video.format(
-        input_path=f'/tmp/{uid}/%04d.jpg',
-        output_path=f'/tmp/{uid}.mp4'
+        input_path=f'{output_folder}/%04d.jpg',
+        output_path=output_video_path
     )
     check_output(cmd, shell=True)
     shutil.rmtree(output_folder)
 
-    return output_path
+    return output_video_path
 
 
 def rotate_direction_vec(rotation):
