@@ -38,7 +38,7 @@ class Frame(models.Model):
         'single' extracts just that frame and returns the path.
         'all' extracts all frames of the containing framecontainer and returns the single frame path.
         """
-        path = f'/tmp/{self.fc.video_name}/{self.index:04}.png'
+        path = f'/tmp/{self.fc.video_name}/{self.index:04}.jpg'
         if os.path.exists(path):
             return path
 
@@ -50,8 +50,7 @@ class Frame(models.Model):
 
         if extract == 'all':
             image_folder = media.extract_frames(framecontainer=self.fc)
-            image_path = os.path.join(image_folder, f'{self.id}.png')
-            return image_path
+            return path
 
     @staticmethod
     def get_video_path(frame_ids):
