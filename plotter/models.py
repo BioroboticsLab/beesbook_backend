@@ -54,8 +54,8 @@ class Frame(models.Model):
 
     @staticmethod
     def get_video_path(frame_ids):
-        frames = Frame.objects.filter(frame_id__in=frame_ids)
-        if len(frame_ids) != frames.count():
+        frames = [Frame.objects.get(frame_id=frame_id) for frame_id in frame_ids]
+        if len(frame_ids) != len(frames):
             raise ValueError('Some or all frame_ids not found.')
 
         return media.extract_video(frames)
