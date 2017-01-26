@@ -38,7 +38,7 @@ def extract_single_frame(frame):
     video_path = frame.fc.video_path
 
     os.makedirs(f'/tmp/{video_name}/', exist_ok=True)
-    output_path = f'/tmp/{video_name}/{frame.index:04}.png'
+    output_path = f'/tmp/{video_name}/{frame.index:04}.jpg'
 
     if not os.path.exists(output_path):
         cmd = config.ffmpeg_extract_single_frame.format(
@@ -95,11 +95,11 @@ def extract_video(frames):
 
     for i, frame in enumerate(frames):
         image_path = frame.get_image_path(extract='all')
-        output_path = os.path.join(output_folder, f'{i:04}.png')
+        output_path = os.path.join(output_folder, f'{i:04}.jpg')
         shutil.copy(image_path, output_path)
 
     cmd = config.ffmpeg_frames_to_video.format(
-        input_path=f'/tmp/{uid}/%04d.png',
+        input_path=f'/tmp/{uid}/%04d.jpg',
         output_path=f'/tmp/{uid}.mp4'
     )
     check_output(cmd, shell=True)
@@ -135,11 +135,12 @@ def plot_frame(frame, x, y, rot):
     fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
     ax.imshow(plt.imread(path))
     rotations = np.array([rotate_direction_vec(rot) for rot in rot])
+    ax.axis('off')
     ax.quiver(y, x, rotations[:, 1], rotations[:, 0], scale=500, color='yellow')
 
     video_name = frame.fc.video_name
     uid = uuid.uuid4()
-    output_path = f'/tmp/{video_name}-plot-{uid}.png'
+    output_path = f'/tmp/{video_name}-plot-{uid}.jpg'
     fig.savefig(output_path, dpi=200)
     plt.close()
     return output_path
@@ -163,10 +164,10 @@ def plot_video(data):
         extract_frames(frame.fc)  # pre extracts all frames out of this framecontainer
         path = plot_frame(frame, d['x'], d['y'], d['rot'])
 
-        output_path = os.path.join(output_folder, f'{i:04}.png')
+        output_path = os.path.join(output_folder, f'{i:04}.jpg')
         shutil.move(path, output_path)
 
-    input_path = os.path.join(output_folder, '%04d.png')
+    input_path = os.path.join(output_folder, '%04d.jpg')
     video_output_path = f'/tmp/{uid}.mp4'
     cmd = config.ffmpeg_frames_to_video.format(input_path=input_path, output_path=video_output_path)
     output = check_output(cmd, shell=True)
