@@ -46,6 +46,7 @@ def extract_single_frame(frame):
             frame_index=frame.index,
             output_path=output_path
         )
+        print('executing: ', cmd)
         output = check_output(cmd, shell=True)
         print('output:', output)
 
@@ -69,11 +70,15 @@ def extract_frames(framecontainer):
 
     # check if files already exist
     if os.path.exists(output_path):
-        if len(os.listdir(output_path)) == framecontainer.frame_set.count():
+        indices = {'{:04}'.format(x) for x in framecontainer.frame_set.values_list('index', flat=True)}
+        files = set([os.path.splitext(x)[0] for x in os.listdir(output_path)])
+
+        if indices.issubset(files):
             return output_path
 
     os.makedirs(output_path, exist_ok=True)
     cmd = config.ffmpeg_extract_all_frames.format(video_path=video_path, output_path=output_path)
+    print('executing: ', cmd)
     output = check_output(cmd, shell=True)
     print('output:', output)
 
@@ -103,6 +108,7 @@ def extract_video(frames):
         input_path=f'{output_folder}/%04d.jpg',
         output_path=output_video_path
     )
+    print('executing: ', cmd)
     check_output(cmd, shell=True)
     shutil.rmtree(output_folder)
 
@@ -171,6 +177,7 @@ def plot_video(data):
     input_path = os.path.join(output_folder, '%04d.jpg')
     video_output_path = f'/tmp/{uid}.mp4'
     cmd = config.ffmpeg_frames_to_video.format(input_path=input_path, output_path=video_output_path)
+    print('executing: ', cmd)
     output = check_output(cmd, shell=True)
     print('Output:', output)
 
