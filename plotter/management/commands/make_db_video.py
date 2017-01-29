@@ -1,4 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
+from tqdm import tqdm
+
 from plotter.models import FrameContainer, Frame, Video
 from bb_binary import Repository, load_frame_container
 import glob
@@ -21,7 +23,7 @@ class Command(BaseCommand):
         path = os.path.join(video_path, '**/*.mkv')
         paths = glob.glob(path, recursive=True)
 
-        for path in paths:
+        for path in tqdm(paths):
             name = os.path.split(path)[1]
             v = Video(video_name=name, video_path=path)
             v.save()
