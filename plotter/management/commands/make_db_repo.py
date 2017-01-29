@@ -1,8 +1,9 @@
 from django.core.management.base import BaseCommand, CommandError
-from tqdm import tqdm
 
 from plotter.models import FrameContainer, Frame, Video
 from bb_binary import Repository, load_frame_container
+
+from plotter.utils import try_tqdm
 
 
 class Command(BaseCommand):
@@ -14,7 +15,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         repo = Repository(options['repo_path'])
         fnames = list(repo.iter_fnames())
-        for fn in tqdm(fnames):
+        for fn in try_tqdm(fnames):
             fc = load_frame_container(fn)
             fco = FrameContainer(fc_id=fc.id, fc_path=fn, video_name=fc.dataSources[0].filename)
             fco.save()

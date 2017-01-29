@@ -42,3 +42,12 @@ def filepath_cacher(f):
         return file_path
 
     return check_file
+
+
+def try_tqdm(iterator):
+    try:
+        from tqdm import tqdm
+        iterator = tqdm(iterator)
+    except ImportError:
+        pass
+    return iterator

@@ -1,11 +1,10 @@
 from django.core.management.base import BaseCommand, CommandError
-from tqdm import tqdm
 
-from plotter.models import FrameContainer, Frame, Video
-from bb_binary import Repository, load_frame_container
 import glob
 import os
 from plotter.models import Video
+from plotter.utils import try_tqdm
+
 
 class Command(BaseCommand):
     help = 'Reads a video_path and saves all paths and their names'
@@ -23,7 +22,7 @@ class Command(BaseCommand):
         path = os.path.join(video_path, '**/*.mkv')
         paths = glob.glob(path, recursive=True)
 
-        for path in tqdm(paths):
+        for path in try_tqdm(paths):
             name = os.path.split(path)[1]
             v = Video(video_name=name, video_path=path)
             v.save()
