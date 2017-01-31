@@ -1,3 +1,5 @@
+width = 4000
+height = 3000
 scale = 0.5
 verbosity_level = 24
 

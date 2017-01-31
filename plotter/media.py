@@ -139,6 +139,8 @@ def plot_frame(frame, x, y, rot):
     x, y = scale(x, y)
     path = extract_single_frame(frame)
     fig, ax = plt.subplots()
+    dpi = fig.get_dpi()
+    fig.set_size_inches(config.width*config.scale/dpi, config.height*config.scale/dpi)
     fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
     ax.imshow(plt.imread(path))
     rotations = np.array([rotate_direction_vec(rot) for rot in rot])
@@ -148,7 +150,7 @@ def plot_frame(frame, x, y, rot):
     video_name = frame.fc.video_name
     uid = uuid.uuid4()
     output_path = f'/tmp/{video_name}-plot-{uid}.jpg'
-    fig.savefig(output_path, dpi=200)
+    fig.savefig(output_path, dpi=dpi)
     plt.close()
     return output_path
 
@@ -169,10 +171,14 @@ def plot_video(data):
     for i, d in enumerate(data):
         frame = Frame.objects.get(frame_id=d['frame_id'])
         extract_frames(frame.fc)  # pre extracts all frames out of this framecontainer
-        path = plot_frame(frame, d['x'], d['y'], d['rot'])
 
         output_path = os.path.join(output_folder, f'{i:04}.jpg')
-        shutil.move(path, output_path)
+        if 'x' in d:
+            path = plot_frame(frame, d['x'], d['y'], d['rot'])
+            shutil.move(path, output_path)
+        else:
+            path = frame.get_image_path()
+            shutil.copy(path, output_path)
 
     input_path = os.path.join(output_folder, '%04d.jpg')
     video_output_path = f'/tmp/{uid}.mp4'

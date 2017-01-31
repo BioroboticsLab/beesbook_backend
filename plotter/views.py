@@ -69,10 +69,11 @@ def plot_video(request):
         raise HttpResponseBadRequest('Only POST requests allowed.')
 
     data_json = request.POST.get('data', None)
+    fill_gap = request.POST.get('fillgap', 'False') == 'True'
 
     if not data_json:
         raise HttpResponseBadRequest('`data` parameter required')
 
     data = json.loads(data_json)
-    path = Frame.plot_video(data)
+    path = Frame.plot_video(data, fill_gap)
     return HttpResponse(FileWrapper(open(path, 'rb')), content_type='video/mp4')

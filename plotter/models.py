@@ -84,4 +84,31 @@ class Frame(models.Model):
     @staticmethod
     @utils.filepath_cacher
     def plot_video(data):
+    def plot_video(data, fillgap=False):
+        if fillgap:
+            fids = [d['frame_id'] for d in data]
+            i = 0
+            while i < len(fids) - 1:
+                fid1, fid2 = fids[i], fids[i+1]
+                f1 = Frame.objects.get(frame_id=fid1)
+                f2 = Frame.objects.get(frame_id=fid2)
+                if f1.fc_id != f2.fc_id:
+                    i += 1
+                    continue
+                if f2.index - f1.index == 1:
+                    i += 1
+                    continue
+                fill_frame_ids = (
+                    Frame.objects.filter(
+                        fc_id=f1.fc_id,
+                        index__gt=f1.index,
+                        index__lt=f2.index
+                    ).order_by('index').values_list('frame_id', flat=True)
+                )
+                for fill_frame_id in reversed(fill_frame_ids):  # reversed so we dont need to increment i
+                    fill_frame_id = int(fill_frame_id)
+                    fids.insert(i+1, fill_frame_id)
+                    data.insert(i+1, {'frame_id': fill_frame_id})
+                i += 1 + len(fill_frame_ids)
+
         return media.plot_video(data)
