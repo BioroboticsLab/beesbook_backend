@@ -83,7 +83,6 @@ class Frame(models.Model):
 
     @staticmethod
     @utils.filepath_cacher
-    def plot_video(data):
     def plot_video(data, fillgap=False):
         if fillgap:
             fids = [d['frame_id'] for d in data]
