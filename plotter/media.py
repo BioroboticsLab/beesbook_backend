@@ -3,13 +3,19 @@ import uuid
 from subprocess import check_output
 import matplotlib
 import shutil
+from multiprocessing import Pool
 
 matplotlib.use('Agg')  # need to be executed before pyplot import, deactivates showing of plot in ipython
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 from plotter import utils
+
+
+def pool():
+    if not hasattr(pool, 'p'):
+        pool.p = Pool(config.n_threads)
+    return pool.p
 
 GPU = False
 if GPU:
@@ -119,16 +125,16 @@ def rotate_direction_vec(rotation):
     x, y = 0, 10
     sined = np.sin(rotation)
     cosined = np.cos(rotation)
-    normed_x = x*cosined  - y*sined
-    normed_y = x*sined    + y*cosined
+    normed_x = x*cosined - y*sined
+    normed_y = x*sined + y*cosined
     return [np.around(normed_x, decimals=2), np.around(normed_y, decimals=2)]
 
 
-def plot_frame(frame, x, y, rot):
+def plot_frame(path, x, y, rot):
     """
 
     Args:
-        frame (Frame):
+        path: the image input path
         x (list): list of x coordinates to plot
         y (list): list of y coordinates to plot
         rot (list): list of rotations to plot
@@ -136,8 +142,14 @@ def plot_frame(frame, x, y, rot):
     Returns:
         path of the plotted frame
     """
+    uid = uuid.uuid4()
+    output_path = f'/tmp/plot-{uid}.jpg'
+
+    if x is None or y is None:
+        shutil.copy(path, output_path)
+        return output_path
+
     x, y = scale(x, y)
-    path = extract_single_frame(frame)
     fig, ax = plt.subplots()
     dpi = fig.get_dpi()
     fig.set_size_inches(config.width*config.scale/dpi, config.height*config.scale/dpi)
@@ -147,9 +159,7 @@ def plot_frame(frame, x, y, rot):
     ax.axis('off')
     ax.quiver(y, x, rotations[:, 1], rotations[:, 0], scale=500, color='yellow')
 
-    video_name = frame.fc.video_name
-    uid = uuid.uuid4()
-    output_path = f'/tmp/{video_name}-plot-{uid}.jpg'
+
     fig.savefig(output_path, dpi=dpi)
     plt.close()
     return output_path
@@ -168,17 +178,21 @@ def plot_video(data):
     uid = uuid.uuid4()
     output_folder = f'/tmp/{uid}/'
     os.makedirs(output_folder, exist_ok=True)
-    for i, d in enumerate(data):
+
+    results = []
+    for d in data:
         frame = Frame.objects.get(frame_id=d['frame_id'])
         extract_frames(frame.fc)  # pre extracts all frames out of this framecontainer
+        r = pool().apply_async(
+            plot_frame,
+            (frame.get_image_path(), d.get('x'), d.get('y'), d.get('rot'))
+        )
+        results.append(r)
 
+    paths = [r.get() for r in results]  # wait for all
+    for i, path in enumerate(paths):
         output_path = os.path.join(output_folder, f'{i:04}.jpg')
-        if 'x' in d:
-            path = plot_frame(frame, d['x'], d['y'], d['rot'])
-            shutil.move(path, output_path)
-        else:
-            path = frame.get_image_path()
-            shutil.copy(path, output_path)
+        shutil.move(path, output_path)
 
     input_path = os.path.join(output_folder, '%04d.jpg')
     video_output_path = f'/tmp/{uid}.mp4'
