@@ -3,13 +3,15 @@ import uuid
 from subprocess import check_output
 import matplotlib
 import shutil
+from multiprocessing import Pool
 
 matplotlib.use('Agg')  # need to be executed before pyplot import, deactivates showing of plot in ipython
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 from plotter import utils
+
+pool = Pool(4)
 
 GPU = False
 if GPU:
@@ -124,11 +126,11 @@ def rotate_direction_vec(rotation):
     return [np.around(normed_x, decimals=2), np.around(normed_y, decimals=2)]
 
 
-def plot_frame(frame, x, y, rot):
+def plot_frame(path, x, y, rot):
     """
 
     Args:
-        frame (Frame):
+        path: the image input path
         x (list): list of x coordinates to plot
         y (list): list of y coordinates to plot
         rot (list): list of rotations to plot
@@ -137,7 +139,6 @@ def plot_frame(frame, x, y, rot):
         path of the plotted frame
     """
     x, y = scale(x, y)
-    path = extract_single_frame(frame)
     fig, ax = plt.subplots()
     fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
     ax.imshow(plt.imread(path))
@@ -145,9 +146,8 @@ def plot_frame(frame, x, y, rot):
     ax.axis('off')
     ax.quiver(y, x, rotations[:, 1], rotations[:, 0], scale=500, color='yellow')
 
-    video_name = frame.fc.video_name
     uid = uuid.uuid4()
-    output_path = f'/tmp/{video_name}-plot-{uid}.jpg'
+    output_path = f'/tmp/plot-{uid}.jpg'
     fig.savefig(output_path, dpi=200)
     plt.close()
     return output_path
@@ -166,11 +166,16 @@ def plot_video(data):
     uid = uuid.uuid4()
     output_folder = f'/tmp/{uid}/'
     os.makedirs(output_folder, exist_ok=True)
-    for i, d in enumerate(data):
+
+    results = []
+    for d in data:
         frame = Frame.objects.get(frame_id=d['frame_id'])
         extract_frames(frame.fc)  # pre extracts all frames out of this framecontainer
-        path = plot_frame(frame, d['x'], d['y'], d['rot'])
+        r = pool.apply_async(plot_frame, (frame.get_image_path(), d['x'], d['y'], d['rot']))
+        results.append(r)
 
+    paths = [r.get() for r in results]  # wait for all
+    for i, path in enumerate(paths):
         output_path = os.path.join(output_folder, f'{i:04}.jpg')
         shutil.move(path, output_path)
 
