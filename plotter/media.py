@@ -14,7 +14,7 @@ from plotter import utils
 
 def pool():
     if not hasattr(pool, 'p'):
-        pool.p = Pool(4)
+        pool.p = Pool(config.n_threads)
     return pool.p
 
 GPU = False

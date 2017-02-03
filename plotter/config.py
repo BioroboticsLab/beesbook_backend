@@ -1,5 +1,6 @@
 scale = 0.5
 verbosity_level = 24
+n_threads = 4
 
 ffmpeg_video = ' '.join([
     f'ffmpeg -v {verbosity_level}',
