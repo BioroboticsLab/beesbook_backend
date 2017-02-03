@@ -11,7 +11,11 @@ import numpy as np
 
 from plotter import utils
 
-pool = Pool(4)
+
+def pool():
+    if not hasattr(pool, 'p'):
+        pool.p = Pool(4)
+    return pool.p
 
 GPU = False
 if GPU:
@@ -121,8 +125,8 @@ def rotate_direction_vec(rotation):
     x, y = 0, 10
     sined = np.sin(rotation)
     cosined = np.cos(rotation)
-    normed_x = x*cosined  - y*sined
-    normed_y = x*sined    + y*cosined
+    normed_x = x*cosined - y*sined
+    normed_y = x*sined + y*cosined
     return [np.around(normed_x, decimals=2), np.around(normed_y, decimals=2)]
 
 
@@ -171,7 +175,7 @@ def plot_video(data):
     for d in data:
         frame = Frame.objects.get(frame_id=d['frame_id'])
         extract_frames(frame.fc)  # pre extracts all frames out of this framecontainer
-        r = pool.apply_async(plot_frame, (frame.get_image_path(), d['x'], d['y'], d['rot']))
+        r = pool().apply_async(plot_frame, (frame.get_image_path(), d['x'], d['y'], d['rot']))
         results.append(r)
 
     paths = [r.get() for r in results]  # wait for all

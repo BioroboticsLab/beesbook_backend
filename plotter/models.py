@@ -79,7 +79,7 @@ class Frame(models.Model):
             raise ValueError('x, y and rot not of the same length.')
 
         frame = Frame.objects.get(frame_id=frame_id)
-        return media.plot_frame(frame, x, y, rot)
+        return media.plot_frame(frame.get_image_path('single'), x, y, rot)
 
     @staticmethod
     @utils.filepath_cacher
