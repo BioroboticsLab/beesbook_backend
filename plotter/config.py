@@ -1,12 +1,16 @@
-width = 4000
-height = 3000
 scale = 0.5
-verbosity_level = 24
-n_threads = 4
+width = int(4000 * scale)
+height = int(3000 * scale)
+padding = int(400 * scale)
 
+n_threads = 4
+cache = False
+gpu = False
+
+verbosity_level = 24
 ffmpeg_video = ' '.join([
     f'ffmpeg -v {verbosity_level}',
-    # '-vcodec hevc_cuvid',
+    '-vcodec hevc_cuvid' if gpu else '',
     '-i {video_path}',  # input
     '-vf "select=gte(n\,{left_frame_idx}),setpts=PTS-STARTPTS" -vframes {number_of_frames}',  # subset selection
     '-crf 28',  # quality
@@ -17,7 +21,7 @@ ffmpeg_video = ' '.join([
 
 ffmpeg_extract_all_frames = ' '.join([
     f'ffmpeg -v {verbosity_level}',
-    # '-vcodec hevc_cuvid',
+    '-vcodec hevc_cuvid' if gpu else '',
     '-r 3',
     '-i {video_path}',
     '-start_number 0',
@@ -38,7 +42,7 @@ ffmpeg_frames_to_video = ' '.join([
 
 ffmpeg_extract_single_frame = ' '.join([
     f'ffmpeg -v {verbosity_level}',
-    #  '-vcodec hevc_cuvid',
+    '-vcodec hevc_cuvid' if gpu else '',
     '-i {video_path}',
     '-vf "select=gte(n\,{frame_index}),'  # first filter: select specific frame
     f'scale=iw*{scale}:ih*{scale}"',  # second filter: scale output down or up

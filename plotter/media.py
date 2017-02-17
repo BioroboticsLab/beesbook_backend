@@ -8,8 +8,9 @@ from multiprocessing import Pool
 matplotlib.use('Agg')  # need to be executed before pyplot import, deactivates showing of plot in ipython
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image
 
-from plotter import utils
+from . import config
 
 
 def pool():
@@ -17,18 +18,24 @@ def pool():
         pool.p = Pool(config.n_threads)
     return pool.p
 
-GPU = False
-if GPU:
-    from . import config_gpu as config
-else:
-    from . import config
 
 
-def scale(x, y):
+def scale(*args):
+    args = list(args)
     scaling_constant = float(config.scale)
-    x = np.array([int(int(xe) * scaling_constant) for xe in x])
-    y = np.array([int(int(ye) * scaling_constant) for ye in y])
-    return x, y
+    for i in range(len(args)):
+        args[i] = np.array([int(int(xe) * scaling_constant) for xe in args[i]])
+    return args[0] if len(args) == 1 else args
+
+
+def adjust_cropping_window(xs, ys):
+    xs, ys = scale(xs, ys)
+    pad = config.padding
+    left, top, right, bottom = ys.min()-pad, xs.min()-pad, ys.max()+pad, xs.max()+pad
+    left, top, right, bottom = [x + x % 2 for x in (left, top, right, bottom)]  # make numbers even for ffmpeg
+    left, top, right, bottom = max(left, 0), max(top, 0), min(right, config.width), min(bottom, config.height)
+
+    return left, top, right, bottom
 
 
 def extract_single_frame(frame):
@@ -130,7 +137,7 @@ def rotate_direction_vec(rotation):
     return [np.around(normed_x, decimals=2), np.around(normed_y, decimals=2)]
 
 
-def plot_frame(path, x, y, rot):
+def plot_frame(path, x, y, rot, crop_coordinates=None):
     """
 
     Args:
@@ -138,6 +145,7 @@ def plot_frame(path, x, y, rot):
         x (list): list of x coordinates to plot
         y (list): list of y coordinates to plot
         rot (list): list of rotations to plot
+        crop_coordinates (tuple): values to crop by. By order: left, top, right, bottom
 
     Returns:
         path of the plotted frame
@@ -152,7 +160,7 @@ def plot_frame(path, x, y, rot):
     x, y = scale(x, y)
     fig, ax = plt.subplots()
     dpi = fig.get_dpi()
-    fig.set_size_inches(config.width*config.scale/dpi, config.height*config.scale/dpi)
+    fig.set_size_inches(config.width/dpi, config.height/dpi)
     fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
     ax.imshow(plt.imread(path))
     rotations = np.array([rotate_direction_vec(rot) for rot in rot])
@@ -162,14 +170,22 @@ def plot_frame(path, x, y, rot):
 
     fig.savefig(output_path, dpi=dpi)
     plt.close()
+
+    if crop_coordinates is not None:
+        args = crop_coordinates
+        im = Image.open(output_path)
+        im = im.crop(args)
+        im.save(output_path)
+
     return output_path
 
 
-def plot_video(data):
+def plot_video(data, crop=False):
     """
     Creates a video with information of a track
     Args:
         data (list): Contains a list of dictionaries
+        crop (bool): Crops the video to the area in which all things happen
 
     Returns:
 
@@ -179,13 +195,19 @@ def plot_video(data):
     output_folder = f'/tmp/{uid}/'
     os.makedirs(output_folder, exist_ok=True)
 
+    crop_coordinates = None
+    if crop:
+        xs = [x for p in data for x in p['x']]
+        ys = [y for p in data for y in p['y']]
+        crop_coordinates = adjust_cropping_window(xs, ys)
+
     results = []
     for d in data:
         frame = Frame.objects.get(frame_id=d['frame_id'])
         extract_frames(frame.fc)  # pre extracts all frames out of this framecontainer
         r = pool().apply_async(
             plot_frame,
-            (frame.get_image_path(), d.get('x'), d.get('y'), d.get('rot'))
+            (frame.get_image_path(), d.get('x'), d.get('y'), d.get('rot'), crop_coordinates)
         )
         results.append(r)
 
