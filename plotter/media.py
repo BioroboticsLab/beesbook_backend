@@ -19,10 +19,9 @@ def pool():
     return pool.p
 
 
-
 def scale(*args):
     args = list(args)
-    scaling_constant = float(config.scale)
+    scaling_constant = config.scale
     for i in range(len(args)):
         args[i] = np.array([int(int(xe) * scaling_constant) for xe in args[i]])
     return args[0] if len(args) == 1 else args
@@ -134,7 +133,7 @@ def rotate_direction_vec(rotation):
     cosined = np.cos(rotation)
     normed_x = x*cosined - y*sined
     normed_y = x*sined + y*cosined
-    return [np.around(normed_x, decimals=2), np.around(normed_y, decimals=2)]
+    return np.around(normed_x, decimals=2), np.around(normed_y, decimals=2)
 
 
 def plot_frame(path, x, y, rot, crop_coordinates=None):
@@ -166,7 +165,6 @@ def plot_frame(path, x, y, rot, crop_coordinates=None):
     rotations = np.array([rotate_direction_vec(rot) for rot in rot])
     ax.axis('off')
     ax.quiver(y, x, rotations[:, 1], rotations[:, 0], scale=0.45, color='yellow', units='xy', alpha=0.5)
-
 
     fig.savefig(output_path, dpi=dpi)
     plt.close()
