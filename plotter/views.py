@@ -70,10 +70,11 @@ def plot_video(request):
 
     data_json = request.POST.get('data', None)
     fill_gap = request.POST.get('fillgap', 'False') == 'True'
+    crop = request.POST.get('crop', 'False') == 'True'
 
     if not data_json:
         raise HttpResponseBadRequest('`data` parameter required')
 
     data = json.loads(data_json)
-    path = Frame.plot_video(data, fill_gap)
+    path = Frame.plot_video(data, fill_gap, crop)
     return HttpResponse(FileWrapper(open(path, 'rb')), content_type='video/mp4')

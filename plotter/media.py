@@ -27,13 +27,31 @@ def scale(*args):
     return args[0] if len(args) == 1 else args
 
 
-def adjust_cropping_window(xs, ys):
+def adjust_cropping_window(xs, ys, keepaspect=True):
     xs, ys = scale(xs, ys)
     pad = config.padding
     left, top, right, bottom = ys.min()-pad, xs.min()-pad, ys.max()+pad, xs.max()+pad
+
+    if keepaspect:
+        aspect = config.width / config.height
+        w, h = right - left, bottom - top
+        diff = w - h * aspect
+        if diff == 0:
+            pass
+        if diff < 0:
+            left, right = left - abs(diff)//2, right + abs(diff)//2
+            if min(config.width - right, left) < 0:
+                diff = abs(left) if left < 0 else config.width - right
+                left, right = left + diff, right + diff
+        elif diff > 0:
+            diff = abs(diff) / aspect
+            top, bottom = top - diff // 2, bottom + diff // 2
+            if min(config.height - bottom, top) < 0:
+                diff = abs(top) if top < 0 else config.height - bottom
+                top, bottom = top + diff, bottom + diff
+
     left, top, right, bottom = [x + x % 2 for x in (left, top, right, bottom)]  # make numbers even for ffmpeg
     left, top, right, bottom = max(left, 0), max(top, 0), min(right, config.width), min(bottom, config.height)
-
     return left, top, right, bottom
 
 

@@ -83,7 +83,7 @@ class Frame(models.Model):
 
     @staticmethod
     @utils.filepath_cacher
-    def plot_video(data, fillgap=False):
+    def plot_video(data, fillgap=False, crop=False):
         if fillgap:
             fids = [d['frame_id'] for d in data]
             i = 0
@@ -110,4 +110,4 @@ class Frame(models.Model):
                     data.insert(i+1, {'frame_id': fill_frame_id})
                 i += 1 + len(fill_frame_ids)
 
-        return media.plot_video(data)
+        return media.plot_video(data, crop)
