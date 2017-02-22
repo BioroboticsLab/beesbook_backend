@@ -213,8 +213,8 @@ def plot_video(data, crop=False):
 
     crop_coordinates = None
     if crop:
-        xs = [x for p in data for x in p['x']]
-        ys = [y for p in data for y in p['y']]
+        xs = [x for p in data for x in p.get('x', [])]
+        ys = [y for p in data for y in p.get('y', [])]
         crop_coordinates = adjust_cropping_window(xs, ys)
 
     results = []
