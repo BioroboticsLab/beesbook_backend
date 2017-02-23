@@ -1,7 +1,7 @@
 scale = 0.5
 width = int(4000 * scale)
 height = int(3000 * scale)
-padding = int(400 * scale)
+padding = int(600 * scale)
 
 n_threads = 4
 cache = False
