@@ -170,22 +170,22 @@ def plot_frame(path, x, y, rot, crop_coordinates=None):
     uid = uuid.uuid4()
     output_path = f'/tmp/plot-{uid}.jpg'
 
-    if x is None or y is None:
+    if x and y:
+        x, y = scale(x, y)
+        fig, ax = plt.subplots()
+        dpi = fig.get_dpi()
+        fig.set_size_inches(config.width/dpi, config.height/dpi)
+        fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
+        ax.imshow(plt.imread(path))
+        rotations = np.array([rotate_direction_vec(rot) for rot in rot])
+        ax.axis('off')
+        ax.quiver(y, x, rotations[:, 1], rotations[:, 0], scale=0.45, color='yellow', units='xy', alpha=0.5)
+
+        fig.savefig(output_path, dpi=dpi)
+        plt.close()
+    else:
+        # no x and y given for this frame
         shutil.copy(path, output_path)
-        return output_path
-
-    x, y = scale(x, y)
-    fig, ax = plt.subplots()
-    dpi = fig.get_dpi()
-    fig.set_size_inches(config.width/dpi, config.height/dpi)
-    fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
-    ax.imshow(plt.imread(path))
-    rotations = np.array([rotate_direction_vec(rot) for rot in rot])
-    ax.axis('off')
-    ax.quiver(y, x, rotations[:, 1], rotations[:, 0], scale=0.45, color='yellow', units='xy', alpha=0.5)
-
-    fig.savefig(output_path, dpi=dpi)
-    plt.close()
 
     if crop_coordinates is not None:
         args = crop_coordinates
