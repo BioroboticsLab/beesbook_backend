@@ -13,28 +13,28 @@ The plots can be cropped to show only relevant areas and the filling of gaps (fo
 
 ## Setup (not for users)
 
-1. Install software and library requirements:
+1. **Install software and library requirements:**
 - docker
 - docker-compose (python package)
 - python virtualenv with packages in `requirements.txt`
 
-2. Initialize database data volume:
+2. **Initialize database data volume:**
 
 `docker create -v /var/lib/postgresql --name postgres_data postgres:9.6`
 
-3. Find and store all video locations
+3. **Find and store all video locations**
 
 `python manage.py make_db_video [video_path_location]`
 
 e.g. `python manage.py make_db_video /home/beesbook/hlrn/work1-hlrn/videos_HD_2016/`
 
-4. Read all repository data
+4. **Read all repository data**
 
 `python manage.py make_db_repo [repo_folder]`
 
 e.g. `python manage.py make_db_repo /mnt/storage/beesbook/repo_season_2016_fixed`
 
-5. Run the server
+5. **Run the server**
 
 Please configure nginx or something similar
 
