@@ -26,4 +26,4 @@ class Command(BaseCommand):
 
 
 
-# start with python manage.py fill_db repo_path
+# start with python manage.py make_db_repo [repo_path]

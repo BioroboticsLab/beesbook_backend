@@ -26,3 +26,5 @@ class Command(BaseCommand):
             name = os.path.split(path)[1]
             v = Video(video_name=name, video_path=path)
             v.save()
+
+# start with python manage.py make_db_video [video_folder_path]
