@@ -27,6 +27,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# increase maximal postable data
+DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440*5
 
 # Application definition
 
