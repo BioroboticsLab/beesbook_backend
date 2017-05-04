@@ -22,6 +22,10 @@ The plots can be cropped to show only relevant areas and the filling of gaps (fo
 
 `docker create -v /var/lib/postgresql --name postgres_data postgres:9.6`
 
+`docker-compose exec postgres psql -U postgres -c "CREATE DATABASE beesbook;"`
+
+`python manage.py migrate`
+
 3. **Find and store all video locations**
 
 `python manage.py make_db_video [video_path_location]`
