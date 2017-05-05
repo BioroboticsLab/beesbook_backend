@@ -17,10 +17,13 @@ The plots can be cropped to show only relevant areas and the filling of gaps (fo
 - docker
 - docker-compose (python package)
 - python virtualenv with packages in `requirements.txt`
+- ffmpeg with x264 encoding and h264 decoding capability
 
 2. **Initialize database data volume:**
 
 `docker create -v /var/lib/postgresql --name postgres_data postgres:9.6`
+
+`docker-compose up -d`
 
 `docker-compose exec postgres psql -U postgres -c "CREATE DATABASE beesbook;"`
 
