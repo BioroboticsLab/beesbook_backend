@@ -62,24 +62,23 @@ class Frame(models.Model):
 
     @staticmethod
     @utils.filepath_cacher
-    def plot_frame(frame_id, x, y, rot):
+    def plot_frame(frame_id, x, y, **args):
         """
-        Plot a single frame with the given frame_id. `x`, `y` and `rot` have to be of the same length.
+        Plot a single frame with the given frame_id. `x`, `y` and other keyword arguments have to be of the same length.
 
         Args:
             frame_id (int): single frame_id to be plotted
             x (List): list of x coordinates
             y (List): list of y coordinates
-            rot (List): list of rotations
 
         Returns:
 
         """
-        if not (len(x) == len(y) == len(rot)):
-            raise ValueError('x, y and rot not of the same length.')
+        if not (len(x) == len(y)):
+            raise ValueError('x and y not of the same length.')
 
         frame = Frame.objects.get(frame_id=frame_id)
-        return media.plot_frame(frame.get_image_path('single'), x, y, rot)
+        return media.plot_frame(frame.get_image_path('single'), x=x, y=y, **args)
 
     @staticmethod
     @utils.filepath_cacher

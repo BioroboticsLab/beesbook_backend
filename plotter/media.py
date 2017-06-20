@@ -7,6 +7,7 @@ from multiprocessing import Pool
 
 matplotlib.use('Agg')  # need to be executed before pyplot import, deactivates showing of plot in ipython
 import matplotlib.pyplot as plt
+import matplotlib.patheffects
 import numpy as np
 from PIL import Image
 
@@ -154,7 +155,7 @@ def rotate_direction_vec(rotation):
     return np.around(normed_x, decimals=2), np.around(normed_y, decimals=2)
 
 
-def plot_frame(path, x, y, rot, crop_coordinates=None):
+def plot_frame(path, x=None, y=None, rot=None, crop_coordinates=None, color=None, radius=None, label=None, title=None, **args):
     """
 
     Args:
@@ -169,18 +170,50 @@ def plot_frame(path, x, y, rot, crop_coordinates=None):
     """
     uid = uuid.uuid4()
     output_path = f'/tmp/plot-{uid}.jpg'
-
+    
+    plot_bees = False
     if x and y:
         x, y = scale(x, y)
+        plot_bees = True
+        
+    if plot_bees or (title is not None):
         fig, ax = plt.subplots()
         dpi = fig.get_dpi()
         fig.set_size_inches(config.width/dpi, config.height/dpi)
         fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
-        ax.imshow(plt.imread(path))
-        rotations = np.array([rotate_direction_vec(rot) for rot in rot])
+        image = plt.imread(path)
+        ax.imshow(image)
+        
         ax.axis('off')
-        ax.quiver(y, x, rotations[:, 1], rotations[:, 0], scale=0.45, color='yellow', units='xy', alpha=0.5)
-
+        if plot_bees:
+            # Draw arrows if rotation is given.
+            if rot is not None:
+                rotations = np.array([rotate_direction_vec(rot) for rot in rot])
+                ax.quiver(y, x, rotations[:, 1], rotations[:, 0], scale=0.45, color='yellow', units='xy', alpha=0.5)
+            # Draw scatterplot if radius is given.
+            if color is None:
+                color = ["yellow"] * x.shape[0]
+            color = np.array(color)
+            for unique_color in np.unique(color):
+                idx = color == unique_color
+                if radius is not None:
+                    radius = np.array(radius)
+                    ax.scatter(y[idx], x[idx], facecolors='none', edgecolors=unique_color, marker="o", s=radius[idx][0])
+                
+                if label is not None:
+                    label = np.array(label)
+                    label = np.array(label)
+                    for i, label_i in enumerate(label[idx]):
+                        if label_i is None or not label_i:
+                            continue
+                        ax.text(y[idx][i], x[idx][i], label_i, color=unique_color, fontsize=36, alpha=0.5)
+        if title is not None:
+            txt = plt.text(0.1, 0.9, title, size=36, color='white', transform=ax.transAxes, horizontalalignment='left')
+            txt.set_path_effects([matplotlib.patheffects.withStroke(linewidth=5, foreground='k')])
+        # Make sure that the plot is cropped at the image's bounds.
+        ax.set_xlim((0, image.shape[1]))
+        ax.set_ylim((0, image.shape[0]))
+        
         fig.savefig(output_path, dpi=dpi)
         plt.close()
     else:
@@ -219,11 +252,14 @@ def plot_video(data, crop=False):
 
     results = []
     for d in data:
+        d["crop_coordinates"] = crop_coordinates
         frame = Frame.objects.get(frame_id=d['frame_id'])
         extract_frames(frame.fc)  # pre extracts all frames out of this framecontainer
         r = pool().apply_async(
             plot_frame,
-            (frame.get_image_path(), d.get('x'), d.get('y'), d.get('rot'), crop_coordinates)
+            (frame.get_image_path(),),
+            d
+            #d.get('x'), d.get('y'), d.get('rot'), crop_coordinates)
         )
         results.append(r)
 

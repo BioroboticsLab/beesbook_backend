@@ -59,7 +59,7 @@ def plot_frame(request):
         raise HttpResponseBadRequest('`data` parameter required')
 
     data = json.loads(data_json)
-    path = Frame.plot_frame(data['frame_id'], data['x'], data['y'], data['rot'])
+    path = Frame.plot_frame(**data)
     return HttpResponse(FileWrapper(open(path, 'rb')), content_type='image/jpg')
 
 
