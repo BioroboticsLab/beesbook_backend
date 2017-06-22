@@ -31,29 +31,28 @@ class Frame(models.Model):
     def __str__(self):
         return f'{self.frame_id} - {self.index}'
 
-    def get_image_path(self, extract=None):
+    def get_image(self, extract='single'):
         """
-        Gets the path to the image. Also enabled the option to extract the picture if not done yet.
+        Retrieves the image, extracting it if necessary.
         Options for extract are 'single' or 'all'.
         'single' extracts just that frame and returns the path.
-        'all' extracts all frames of the containing framecontainer and returns the single frame path.
-        """
-        path = f'/tmp/{self.fc.video_name}/{self.index:04}.jpg'
-        if os.path.exists(path):
-            return path
+        'all' extracts all frames of the containing framecontainer and returns the single frame.
 
-        if extract is None:
-            return None
+        Returns:
+            utils.ReusableBytesIO object containing the image.
+        """
+        if not extract in ('single', 'all'):
+            raise ValueError("extract must be either 'all' or 'single'")
 
         if extract == 'single':
             return media.extract_single_frame(self)
 
         if extract == 'all':
-            image_folder = media.extract_frames(framecontainer=self.fc)
-            return path
+            all_images = media.extract_frames(framecontainer=self.fc)
+            return all_images[self.frame_id]
 
     @staticmethod
-    def get_video_path(frame_ids):
+    def get_video(frame_ids):
         frames = [Frame.objects.get(frame_id=frame_id) for frame_id in frame_ids]
         if len(frame_ids) != len(frames):
             raise ValueError('Some or all frame_ids not found.')
@@ -61,7 +60,6 @@ class Frame(models.Model):
         return media.extract_video(frames)
 
     @staticmethod
-    @utils.filepath_cacher
     def plot_frame(frame_id, x, y, **args):
         """
         Plot a single frame with the given frame_id. `x`, `y` and other keyword arguments have to be of the same length.
@@ -72,16 +70,15 @@ class Frame(models.Model):
             y (List): list of y coordinates
 
         Returns:
-
+            utils.ReusableBytesIO object containing the final image
         """
         if not (len(x) == len(y)):
             raise ValueError('x and y not of the same length.')
 
         frame = Frame.objects.get(frame_id=frame_id)
-        return media.plot_frame(frame.get_image_path('single'), x=x, y=y, **args)
+        return media.plot_frame(frame.get_image('single'), x=x, y=y, **args)
 
     @staticmethod
-    @utils.filepath_cacher
     def plot_video(data, fillgap=False, crop=False):
         if fillgap:
             fids = [d['frame_id'] for d in data]

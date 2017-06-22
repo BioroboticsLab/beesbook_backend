@@ -4,12 +4,14 @@ height = int(3000 * scale)
 padding = int(600 * scale)
 
 n_threads = 4
-cache = False
-gpu = False
+gpu = True
+enable_caching = True
+
+binary_location = '/opt/bin/ffmpeg'
 
 verbosity_level = 24
 ffmpeg_video = ' '.join([
-    f'ffmpeg -v {verbosity_level}',
+    f'{binary_location} -y -v {verbosity_level}',
     '-vcodec hevc_cuvid' if gpu else '',
     '-i {video_path}',  # input
     '-vf "select=gte(n\,{left_frame_idx}),setpts=PTS-STARTPTS" -vframes {number_of_frames}',  # subset selection
@@ -20,7 +22,7 @@ ffmpeg_video = ' '.join([
 ])
 
 ffmpeg_extract_all_frames = ' '.join([
-    f'ffmpeg -v {verbosity_level}',
+    f'{binary_location} -y -v {verbosity_level}',
     '-vcodec hevc_cuvid' if gpu else '',
     '-r 3',
     '-i {video_path}',
@@ -31,17 +33,17 @@ ffmpeg_extract_all_frames = ' '.join([
 ])
 
 ffmpeg_frames_to_video = ' '.join([
-    f'ffmpeg -v {verbosity_level}',
+    f'{binary_location} -y -v {verbosity_level}',
     '-r 3',  # input framerate
     '-i {input_path}',
     '-r 3',  # video framerate (kinda irrelevant)
     '-pix_fmt yuv420p',
-    '-vcodec libx264',
+    '-vcodec h264_nvenc',
     '{output_path}'
 ])
 
 ffmpeg_extract_single_frame = ' '.join([
-    f'ffmpeg -v {verbosity_level}',
+    f'{binary_location} -y -v {verbosity_level}',
     '-vcodec hevc_cuvid' if gpu else '',
     '-i {video_path}',
     '-vf "select=gte(n\,{frame_index}),'  # first filter: select specific frame

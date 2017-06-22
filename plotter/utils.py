@@ -1,47 +1,13 @@
-import joblib
 import os
+import io
+import cachetools
 
-cache_path = '/tmp/.plotter_cache/'
-os.makedirs(cache_path, exist_ok=True)
-mem = joblib.Memory(cache_path, verbose=0)
-
-
-def cacher(f):
-    return mem.cache(f)
-
+from . import config
 
 def get_filename(path):
     base, name = os.path.split(path)
     name, ext = os.path.splitext(name)
     return name
-
-
-def filepath_cacher(f):
-    """
-    A caching decorator for functions which create a file and return the path.
-    It checks if the path exists, if not recomputes the function.
-
-    :param f: A function which creates a file and then returns the path.
-    :return: A decorated caching function
-    """
-    f = mem.cache(f)
-
-    def check_file(*args, **kwargs):
-        if 'uncache' in kwargs:
-            uncache = kwargs.pop('uncache')
-        else:
-            uncache = False
-
-        mem_object = f.call_and_shelve(*args, **kwargs)
-        file_path = mem_object.get()
-
-        # cached file_path does not exist anymore, clear cache and recompute
-        if not os.path.exists(file_path) or uncache:
-            mem_object.clear()
-            file_path = f(*args, **kwargs)
-        return file_path
-
-    return check_file
 
 
 def try_tqdm(iterator):
@@ -51,3 +17,39 @@ def try_tqdm(iterator):
     except ImportError:
         pass
     return iterator
+
+class ReusableBytesIO(io.BytesIO):
+    """
+        Wrapper for io.BytesIO that makes sure that the memory is not freed.
+        This enables caching and re-using the buffer.
+
+        The memory is freed when the object is garbage-collected.
+    """
+    def close(self):
+        self.seek(0)
+
+def buffer_object_cacher(key=None, maxsize=None):
+    """
+        Decorator that can be used to cache ReusableBytesIO objects intended for reading.
+        The decorator makes sure the objects are immutable and reset to position 0.
+        The decorated function can either return pure ReusableBytesIO objects or dicts.
+    """
+
+    if not config.enable_caching:
+        return lambda x: x
+
+    def decorator(fun):
+        # Cache the results.
+        cached_fun = cachetools.cached(cachetools.LRUCache(maxsize=maxsize),
+                                key=lambda x: cachetools.keys.hashkey(key(x)))(fun)
+        # Reset the buffer(s) on every cache-hit so it's readable again.
+        def rewind_wrapper(*args, **kwargs):
+            results = cached_fun(*args, **kwargs)
+            if isinstance(results, dict):
+                for buffer in results.values():
+                    buffer.seek(0)
+            else:
+                results.seek(0)
+            return results
+        return rewind_wrapper
+    return decorator

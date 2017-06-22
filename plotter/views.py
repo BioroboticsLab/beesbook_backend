@@ -19,9 +19,9 @@ def get_frame(request):
     if frame_id is None:
         raise HttpResponseBadRequest('Parameter frame_id required')
     frame = Frame.objects.get(frame_id=frame_id)
-    path = frame.get_image_path(extract='single')
+    buffer = frame.get_image(extract='single')
 
-    return HttpResponse(FileWrapper(open(path, 'rb')), content_type='image/png')
+    return HttpResponse(FileWrapper(buffer), content_type='image/jpg')
 
 
 @csrf_exempt
@@ -45,8 +45,8 @@ def get_video(request):
         fc = FrameContainer.objects.get(fc_id=frame_container_id)
         frame_ids = fc.frame_set.all().values_list('frame_id', flat=True)
 
-    path = Frame.get_video_path(frame_ids)
-    return HttpResponse(FileWrapper(open(path, 'rb')), content_type='video/mp4')
+    buffer = Frame.get_video(frame_ids)
+    return HttpResponse(FileWrapper(buffer), content_type='video/mp4')
 
 
 @csrf_exempt
@@ -59,8 +59,8 @@ def plot_frame(request):
         raise HttpResponseBadRequest('`data` parameter required')
 
     data = json.loads(data_json)
-    path = Frame.plot_frame(**data)
-    return HttpResponse(FileWrapper(open(path, 'rb')), content_type='image/jpg')
+    buffer = Frame.plot_frame(**data)
+    return HttpResponse(FileWrapper(buffer), content_type='image/jpg')
 
 
 @csrf_exempt
@@ -76,5 +76,5 @@ def plot_video(request):
         raise HttpResponseBadRequest('`data` parameter required')
 
     data = json.loads(data_json)
-    path = Frame.plot_video(data, fill_gap, crop)
-    return HttpResponse(FileWrapper(open(path, 'rb')), content_type='video/mp4')
+    buffer = Frame.plot_video(data, fill_gap, crop)
+    return HttpResponse(FileWrapper(buffer), content_type='video/mp4')

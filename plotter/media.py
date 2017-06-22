@@ -1,8 +1,9 @@
 import os
-import uuid
+import tempfile
 from subprocess import check_output
 import matplotlib
 import shutil
+import copy
 from multiprocessing import Pool
 
 matplotlib.use('Agg')  # need to be executed before pyplot import, deactivates showing of plot in ipython
@@ -12,7 +13,7 @@ import numpy as np
 from PIL import Image
 
 from . import config
-
+from . import utils
 
 def pool():
     if not hasattr(pool, 'p'):
@@ -56,34 +57,34 @@ def adjust_cropping_window(xs, ys, keepaspect=True):
     return left, top, right, bottom
 
 
+@utils.buffer_object_cacher(key=lambda x: x.frame_id, maxsize=16)
 def extract_single_frame(frame):
     """
-    Extracts the image to a `Frame`-object.
+    Extracts the image belonging to a `Frame`-object.
     Args:
         frame (Frame): The frame which should be extracted.
 
-    Returns: The path to the image.
+    Returns:
+        An utils.ReusableBytesIO object containing the image.
 
     """
-    video_name = frame.fc.video_name
-    video_path = frame.fc.video_path
+    with tempfile.NamedTemporaryFile(suffix=".jpg") as tmpfile:
 
-    os.makedirs(f'/tmp/{video_name}/', exist_ok=True)
-    output_path = f'/tmp/{video_name}/{frame.index:04}.jpg'
-
-    if not os.path.exists(output_path):
         cmd = config.ffmpeg_extract_single_frame.format(
-            video_path=video_path,
+            video_path=frame.fc.video_path,
             frame_index=frame.index,
-            output_path=output_path
+            output_path=tmpfile.name
         )
         print('executing: ', cmd)
         output = check_output(cmd, shell=True)
         print('output:', output)
 
-    return output_path
+        with open(tmpfile.name, "rb") as file:
+            buf = utils.ReusableBytesIO(file.read())
+            buf.seek(0)
+            return buf
 
-
+@utils.buffer_object_cacher(key=lambda x: x.video_path, maxsize=32)
 def extract_frames(framecontainer):
     """
     Extracts all frame-images of the corresponding video file of a FrameContainer.
@@ -92,28 +93,33 @@ def extract_frames(framecontainer):
         framecontainer (FrameContainer): The FrameContainer which represents the video file from which the frames
          should be extracted
 
-    Returns: Directory path of the extracted images
+    Returns:
+        Dictionary with a mapping of Frame.id to utils.ReusableBytesIO object containing the frame.
 
     """
     video_name = framecontainer.video_name
-    video_path = framecontainer.video_path
-    output_path = f'/tmp/{video_name}'
 
-    # check if files already exist
-    if os.path.exists(output_path):
-        indices = {'{:04}'.format(x) for x in framecontainer.frame_set.values_list('index', flat=True)}
-        files = set([os.path.splitext(x)[0] for x in os.listdir(output_path)])
+    # Required frames.
+    # Subset of the resulting filenames of the ffmpeg command.
+    frame_set = framecontainer.frame_set
+    images = ['{:04}.jpg'.format(x) for x in frame_set.values_list('index', flat=True)]
+    
+    results = dict()
 
-        if indices.issubset(files):
-            return output_path
+    with tempfile.TemporaryDirectory() as tmpdir:
 
-    os.makedirs(output_path, exist_ok=True)
-    cmd = config.ffmpeg_extract_all_frames.format(video_path=video_path, output_path=output_path)
-    print('executing: ', cmd)
-    output = check_output(cmd, shell=True)
-    print('output:', output)
-
-    return output_path
+        cmd = config.ffmpeg_extract_all_frames.format(
+            video_path=framecontainer.video_path, output_path=tmpdir)
+        print('executing: ', cmd)
+        output = check_output(cmd, shell=True)
+        print('output:', output)
+        
+        for idx, frame in enumerate(frame_set.all()):
+            with open(os.path.join(tmpdir, images[idx]), "rb") as file:
+                output = utils.ReusableBytesIO(file.read())
+                output.seek(0)
+                results[frame.frame_id] = output
+    return results
 
 
 def extract_video(frames):
@@ -123,28 +129,28 @@ def extract_video(frames):
         frames (list:Frame): list of frames
 
     Returns:
-
+        The video as a utils.ReusableBytesIO object.
     """
-    uid = uuid.uuid4()
-    output_folder = f'/tmp/{uid}'
-    os.makedirs(output_folder, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmpdir:
 
-    for i, frame in enumerate(frames):
-        image_path = frame.get_image_path(extract='all')
-        output_path = os.path.join(output_folder, f'{i:04}.jpg')
-        shutil.copy(image_path, output_path)
+        for i, frame in enumerate(frames):
+            buffer = frame.get_image(extract='all')
+            output_path = os.path.join(tmpdir, f'{i:04}.jpg')
+            shutil.copyfileobj(buffer, output_path)
 
-    output_video_path = f'/tmp/{uid}.mp4'
-    cmd = config.ffmpeg_frames_to_video.format(
-        input_path=f'{output_folder}/%04d.jpg',
-        output_path=output_video_path
-    )
-    print('executing: ', cmd)
-    check_output(cmd, shell=True)
-    shutil.rmtree(output_folder)
+        with tempfile.NamedTemporaryFile(suffix=".mp4") as tmpfile:
 
-    return output_video_path
-
+            cmd = config.ffmpeg_frames_to_video.format(
+                input_path=f'{tmpdir}/%04d.jpg',
+                output_path=tmpfile.name
+            )
+            print('executing: ', cmd)
+            check_output(cmd, shell=True)
+            
+            with open(tmpfile.name, "rb") as file:
+                output = utils.ReusableBytesIO(file.read())
+                output.seek(0)
+                return output
 
 def rotate_direction_vec(rotation):
     x, y = 0, 10
@@ -155,33 +161,33 @@ def rotate_direction_vec(rotation):
     return np.around(normed_x, decimals=2), np.around(normed_y, decimals=2)
 
 
-def plot_frame(path, x=None, y=None, rot=None, crop_coordinates=None, color=None, radius=None, label=None, title=None, **args):
+def plot_frame(buffer, x=None, y=None, rot=None, crop_coordinates=None, color=None, radius=None, label=None, title=None, **args):
     """
 
     Args:
-        path: the image input path
+        buffer: utils.ReusableBytesIO object containing the image
         x (list): list of x coordinates to plot
         y (list): list of y coordinates to plot
         rot (list): list of rotations to plot
         crop_coordinates (tuple): values to crop by. By order: left, top, right, bottom
 
     Returns:
-        path of the plotted frame
+        utils.ReusableBytesIO object containing the final image
     """
-    uid = uuid.uuid4()
-    output_path = f'/tmp/plot-{uid}.jpg'
     
     plot_bees = False
     if x and y:
         x, y = scale(x, y)
         plot_bees = True
-        
+    
+    outputbuffer = None
+
     if plot_bees or (title is not None):
         fig, ax = plt.subplots()
         dpi = fig.get_dpi()
         fig.set_size_inches(config.width/dpi, config.height/dpi)
         fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
-        image = plt.imread(path)
+        image = plt.imread(buffer, format="JPG")
         ax.imshow(image)
         
         ax.axis('off')
@@ -214,19 +220,24 @@ def plot_frame(path, x=None, y=None, rot=None, crop_coordinates=None, color=None
         ax.set_xlim((0, image.shape[1]))
         ax.set_ylim((0, image.shape[0]))
         
-        fig.savefig(output_path, dpi=dpi)
+        outputbuffer = utils.ReusableBytesIO()
+        fig.savefig(outputbuffer, dpi=dpi, format='JPG')
         plt.close()
     else:
-        # no x and y given for this frame
-        shutil.copy(path, output_path)
+        outputbuffer = copy.copy(buffer)
+
+    outputbuffer.seek(0)
 
     if crop_coordinates is not None:
-        args = crop_coordinates
-        im = Image.open(output_path)
-        im = im.crop(args)
-        im.save(output_path)
+        im = Image.open(outputbuffer)
+        im = im.crop(crop_coordinates)
+        
+        outputbuffer.seek(0)
+        with open(outputbuffer, "wb") as file:
+            im.save(file, format='JPG')
+        outputbuffer.seek(0)
 
-    return output_path
+    return outputbuffer
 
 
 def plot_video(data, crop=False):
@@ -237,12 +248,9 @@ def plot_video(data, crop=False):
         crop (bool): Crops the video to the area in which all things happen
 
     Returns:
-
+        utils.ReusableBytesIO object containing the video.
     """
     from .models import Frame
-    uid = uuid.uuid4()
-    output_folder = f'/tmp/{uid}/'
-    os.makedirs(output_folder, exist_ok=True)
 
     crop_coordinates = None
     if crop:
@@ -251,30 +259,39 @@ def plot_video(data, crop=False):
         crop_coordinates = adjust_cropping_window(xs, ys)
 
     results = []
+    extracted_frames = dict()
     for d in data:
         d["crop_coordinates"] = crop_coordinates
         frame = Frame.objects.get(frame_id=d['frame_id'])
-        extract_frames(frame.fc)  # pre extracts all frames out of this framecontainer
+
+        if frame.frame_id not in extracted_frames:
+            extracted_frames = {**extracted_frames, **extract_frames(frame.fc)}
+            assert(frame.frame_id in extracted_frames)
+
         r = pool().apply_async(
             plot_frame,
-            (frame.get_image_path(),),
+            (extracted_frames[frame.frame_id],),
             d
             #d.get('x'), d.get('y'), d.get('rot'), crop_coordinates)
         )
         results.append(r)
 
-    paths = [r.get() for r in results]  # wait for all
-    for i, path in enumerate(paths):
-        output_path = os.path.join(output_folder, f'{i:04}.jpg')
-        shutil.move(path, output_path)
+    images = [r.get() for r in results]  # wait for all
 
-    input_path = os.path.join(output_folder, '%04d.jpg')
-    video_output_path = f'/tmp/{uid}.mp4'
-    cmd = config.ffmpeg_frames_to_video.format(input_path=input_path, output_path=video_output_path)
-    print('executing: ', cmd)
-    output = check_output(cmd, shell=True)
-    print('Output:', output)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Write buffer to disk for ffmpeg to work.
+        for idx, buffer in enumerate(images):
+            with open(os.path.join(tmpdir, f'{idx:04d}.jpg'), "wb") as file:
+                shutil.copyfileobj(buffer, file)
+        
+        input_path = os.path.join(tmpdir, '%04d.jpg')
+        video_output_path = os.path.join(tmpdir, 'video.mp4')
+        cmd = config.ffmpeg_frames_to_video.format(input_path=input_path, output_path=video_output_path)
+        print('executing: ', cmd)
+        output = check_output(cmd, shell=True)
+        print('Output:', output)
 
-    shutil.rmtree(output_folder)  # deleting all temporary files
-
-    return video_output_path
+        with open(video_output_path, "rb") as file:
+            buf = utils.ReusableBytesIO(file.read())
+            buf.seek(0)
+            return buf
