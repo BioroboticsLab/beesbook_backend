@@ -1,17 +1,13 @@
 import json
 import io
 
-from . import media
-
 server_adress = '127.0.0.1:8000'
 
-class ObjectRequestMixin(object):
-    def execute_request(command, method='POST', data=None):
+class _ObjectRequester(object):
+    def execute_request(self, command, method='POST', data=None):
         import requests
 
-        request_url = 'http://' + server_adress + '/plotter/{}/'
-
-        url = self.request_url.format(command)
+        url = ('http://' + server_adress + '/plotter/{}/').format(command)
 
         if method == 'GET':
             r = requests.get(url, stream=True)
@@ -31,7 +27,7 @@ class ObjectRequestMixin(object):
 
         return buf
 
-class FramePlotter(ObjectRequestMixin):
+class FramePlotter(_ObjectRequester):
 
     # The following attributes are global image attributes.
     _frame_id = None         # bb_binary frame id.
@@ -93,9 +89,9 @@ class FramePlotter(ObjectRequestMixin):
         import matplotlib.pyplot as plt
         data = dict(frame_options=self.to_json())
         buf = self.execute_request("plot_frame", data=data)
-        return plt.imread(buf)
+        return plt.imread(buf, format="JPG")
 
-class VideoPlotter(ObjectRequestMixin):
+class VideoPlotter(_ObjectRequester):
 
     # List of FramePlotter containing all required options.
     _frames = None
