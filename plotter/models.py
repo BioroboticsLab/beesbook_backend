@@ -31,7 +31,7 @@ class Frame(models.Model):
     def __str__(self):
         return f'{self.frame_id} - {self.index}'
 
-    def get_image(self, extract='single'):
+    def get_image(self, scale=1.0, extract='single'):
         """
         Retrieves the image, extracting it if necessary.
         Options for extract are 'single' or 'all'.
@@ -45,65 +45,17 @@ class Frame(models.Model):
             raise ValueError("extract must be either 'all' or 'single'")
 
         if extract == 'single':
-            return media.extract_single_frame(self)
+            return media.extract_single_frame(self, scale)
 
         if extract == 'all':
-            all_images = media.extract_frames(framecontainer=self.fc)
+            all_images = media.extract_frames(framecontainer=self.fc, scale=scale)
             return all_images[self.frame_id]
 
     @staticmethod
-    def get_video(frame_ids):
+    def get_video(frame_ids, scale=0.5):
         frames = [Frame.objects.get(frame_id=frame_id) for frame_id in frame_ids]
         if len(frame_ids) != len(frames):
             raise ValueError('Some or all frame_ids not found.')
 
-        return media.extract_video(frames)
+        return media.extract_video(frames, scale=scale)
 
-    @staticmethod
-    def plot_frame(frame_id, x, y, **args):
-        """
-        Plot a single frame with the given frame_id. `x`, `y` and other keyword arguments have to be of the same length.
-
-        Args:
-            frame_id (int): single frame_id to be plotted
-            x (List): list of x coordinates
-            y (List): list of y coordinates
-
-        Returns:
-            utils.ReusableBytesIO object containing the final image
-        """
-        if not (len(x) == len(y)):
-            raise ValueError('x and y not of the same length.')
-
-        frame = Frame.objects.get(frame_id=frame_id)
-        return media.plot_frame(frame.get_image('single'), x=x, y=y, **args)
-
-    @staticmethod
-    def plot_video(data, fillgap=False, crop=False):
-        if fillgap:
-            fids = [d['frame_id'] for d in data]
-            i = 0
-            while i < len(fids) - 1:
-                fid1, fid2 = fids[i], fids[i+1]
-                f1 = Frame.objects.get(frame_id=fid1)
-                f2 = Frame.objects.get(frame_id=fid2)
-                if f1.fc_id != f2.fc_id:
-                    i += 1
-                    continue
-                if f2.index - f1.index == 1:
-                    i += 1
-                    continue
-                fill_frame_ids = (
-                    Frame.objects.filter(
-                        fc_id=f1.fc_id,
-                        index__gt=f1.index,
-                        index__lt=f2.index
-                    ).order_by('index').values_list('frame_id', flat=True)
-                )
-                for fill_frame_id in reversed(fill_frame_ids):  # reversed so we dont need to increment i
-                    fill_frame_id = int(fill_frame_id)
-                    fids.insert(i+1, fill_frame_id)
-                    data.insert(i+1, {'frame_id': fill_frame_id})
-                i += 1 + len(fill_frame_ids)
-
-        return media.plot_video(data, crop)

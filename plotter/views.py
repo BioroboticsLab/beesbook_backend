@@ -8,7 +8,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
 from plotter.models import Frame, FrameContainer
-
+from plotter.media import FramePlotter, VideoPlotter
 
 @csrf_exempt
 def get_frame(request):
@@ -54,12 +54,14 @@ def plot_frame(request):
     if request.method != 'POST':
         raise HttpResponseBadRequest('Only POST requests allowed.')
 
-    data_json = request.POST.get('data', None)
+    data_json = request.POST.get('frame_options', None)
     if not data_json:
-        raise HttpResponseBadRequest('`data` parameter required')
-
-    data = json.loads(data_json)
-    buffer = Frame.plot_frame(**data)
+        raise HttpResponseBadRequest('`frame_options` parameter required')
+    
+    plotter = FramePlotter.from_json(data_json)
+    print(f"Requesting frame {plotter.frame_id}")
+    buffer = Frame.objects.get(frame_id=plotter.frame_id).get_image(scale=plotter.scale, extract='single')
+    buffer = plotter.plot(buffer)
     return HttpResponse(FileWrapper(buffer), content_type='image/jpg')
 
 
@@ -68,13 +70,11 @@ def plot_video(request):
     if request.method != 'POST':
         raise HttpResponseBadRequest('Only POST requests allowed.')
 
-    data_json = request.POST.get('data', None)
-    fill_gap = request.POST.get('fillgap', 'False') == 'True'
-    crop = request.POST.get('crop', 'False') == 'True'
+    data_json = request.POST.get('video_options', None)
 
     if not data_json:
-        raise HttpResponseBadRequest('`data` parameter required')
+        raise HttpResponseBadRequest('`video_options` parameter required')
 
-    data = json.loads(data_json)
-    buffer = Frame.plot_video(data, fill_gap, crop)
+    plotter = VideoPlotter.from_json(data_json)
+    buffer = plotter.plot()
     return HttpResponse(FileWrapper(buffer), content_type='video/mp4')

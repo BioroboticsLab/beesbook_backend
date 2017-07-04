@@ -41,7 +41,7 @@ def buffer_object_cacher(key=None, maxsize=None):
     def decorator(fun):
         # Cache the results.
         cached_fun = cachetools.cached(cachetools.LRUCache(maxsize=maxsize),
-                                key=lambda x: cachetools.keys.hashkey(key(x)))(fun)
+                                key=lambda *x,**y: cachetools.keys.hashkey(key(*x,**y)))(fun)
         # Reset the buffer(s) on every cache-hit so it's readable again.
         def rewind_wrapper(*args, **kwargs):
             results = cached_fun(*args, **kwargs)
