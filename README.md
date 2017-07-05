@@ -4,11 +4,29 @@ The purpose of this backend is to interface the data on the servers and the user
 The plots can be cropped to show only relevant areas and the filling of gaps (for missing frames in tracks).
 
 ## How To (for users)
-1. tunnel
+1. install api part of bb_backend (no dependencies required)
+    - pip install git+https://github.com/BioroboticsLab/beesbook_backend.git
+2. tunnel
 
 `ssh -N -L 8000:localhost:8000 thekla.imp.fu-berlin.de`
 
-2. post-request similar to [test-notebook](https://github.com/BioroboticsLab/beesbook_backend/blob/master/plotter/tests/test.ipynb)
+3. use bb_backend.api to fetch images and videos:
+
+```
+import bb_backend.api
+from bb_backend.api import FramePlotter, VideoPlotter
+bb_backend.api.server_adress = '127.0.0.1:8000'
+
+frame_plotter = FramePlotter(frame_id=12058089920919369671, xs=[350, 450], ys=[350, 450],
+                                sizes=[40,200],title="Image title (e.g. timestamp)",
+                                labels=["Abee","Beebee"], scale=1.0, colors=["r", "y"])
+plt.imshow(frame_plotter.get_image())
+
+# Make video consisting of 3 times the same frame.
+video_plotter = VideoPlotter(frames=[frame_plotter, frame_plotter, frame_plotter])
+
+video_plotter.get_video(display_in_notebook=True)
+```
 
 
 ## Setup (not for users)
