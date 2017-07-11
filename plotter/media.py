@@ -268,15 +268,15 @@ class FramePlotter(api.FramePlotter):
                 if self.sizes is not None:
                     radius = np.array(self.sizes)
                     # The size is meant to be in pixels of the original video.
-                    # A radius of around 40 pixels would be a tag.
-                    size = float(radius[idx][0])
+                    # A radius of around 25 pixels would be a tag.
+                    size = 2.0 * float(radius[idx][0])
                     # Adjust for cropping region.
                     # Usually the markersize scales with the window.
                     size /= width / self.scale / config.width
                     # Calcluate area, adjusted for scaling factor.
                     size = (size * self.scale) ** 2.0
                     ax.scatter(self.ys[idx], self.xs[idx], facecolors='none', edgecolors=unique_color, marker="o",
-                      s=size, linewidth=10 * self.scale)
+                      s=size, linewidth=5 * self.scale, alpha=0.5)
                 # Draw marker labels if given.
                 if self.labels is not None:
                       for i, label_i in enumerate(self.labels[idx]):
