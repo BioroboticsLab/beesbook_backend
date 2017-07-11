@@ -118,7 +118,9 @@ class VideoPlotter(_ObjectRequester):
     def from_json(cls, data_json):
         return cls.from_dict(json.loads(data_json))
     def to_json(self):
-        return json.dumps(dict(self))
+        dictionary = dict(self)
+        dictionary["frames"] = [dict(f) for f in dictionary["frames"]]
+        return json.dumps(dictionary)
 
     # Retrieve all properties as (name, value) pairs.
     def __iter__(self):
@@ -153,7 +155,8 @@ class VideoPlotter(_ObjectRequester):
         
         if save_to_path is not None:
             import shutil
-            shutil.copyfileobj(buf, save_to_path)
+            with open(save_to_path, "wb") as file:
+                shutil.copyfileobj(buf, file)
             temppath = save_to_path
             
         if display_in_notebook:

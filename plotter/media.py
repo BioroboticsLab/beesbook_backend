@@ -134,7 +134,8 @@ def extract_video(frames):
         for i, frame in enumerate(frames):
             buffer = frame.get_image(extract='all')
             output_path = os.path.join(tmpdir, f'{i:04}.jpg')
-            shutil.copyfileobj(buffer, output_path)
+            with open(output_path, "wb") as file:
+                shutil.copyfileobj(buffer, file)
 
         with tempfile.NamedTemporaryFile(suffix=".mp4") as tmpfile:
 
@@ -354,11 +355,11 @@ class VideoPlotter(api.VideoPlotter):
 
         # Calculate auto-cropping.
         if self._crop_margin is not None:
-            scale = this._scale
+            scale = self._scale
             if scale is None and len(self._frames) > 0:
                 scale = self._frames[0]._scale
-            xs = [x for frame in self._frames for x in frame._xs]
-            ys = [y for frame in self._frames for y in frame._ys]
+            xs = np.array([x for frame in self._frames for x in frame._xs])
+            ys = np.array([y for frame in self._frames for y in frame._ys])
             self._crop_coordinates = adjust_cropping_window(xs, ys,
                                         scale=scale, padding=self._crop_margin)
 
