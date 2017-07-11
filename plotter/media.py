@@ -283,6 +283,16 @@ class FramePlotter(api.FramePlotter):
                         if label_i is None or not label_i:
                             continue
                         ax.text(self.ys[idx][i], self.xs[idx][i], label_i, color=unique_color, fontsize=int(72 * self.scale), alpha=0.5)
+        if self._paths is not None:
+            for label, path in self._paths.items():
+                path = np.array(path)
+                color = "k"
+                try:
+                    label_idx = self.labels.index(label)
+                    color = self.colors[label_idx]
+                except:
+                    pass
+                ax.plot(path[:,1], path[:,0], color=color, alpha=0.5)
         if self.title is not None:
             txt = plt.text(0.1, 0.9, self.title, size=int(108 * self.scale), color='white', transform=ax.transAxes, horizontalalignment='left')
             txt.set_path_effects([matplotlib.patheffects.withStroke(linewidth=5, foreground='k')])
@@ -362,6 +372,58 @@ class VideoPlotter(api.VideoPlotter):
             ys = np.array([y for frame in self._frames for y in frame._ys])
             self._crop_coordinates = adjust_cropping_window(xs, ys,
                                         scale=scale, padding=self._crop_margin)
+
+        # Calculate tracks based on the labels.
+        if self._track_labels:
+            # First pass, figure out positions of labels per frame.
+            for frame_idx, frame in enumerate(self._frames):
+                if frame.labels is None:
+                    continue
+                if not frame._paths:
+                    frame._paths = {}
+                # For every label in the current frame..
+                for label_idx, label in frame.labels:
+                    current_path = (math.inf, [])
+                    if label in frame._paths:
+                        current_path = frame._paths[label]
+
+                    candidates = []
+                    label_x, label_y = frame.xs[label_idx], frame.ys[label_idx]
+                    # .. find fitting label in the next frames.
+                    for next_frame_idx in range(frame_idx + 1, len(self._frames)):
+                        next_frame = self._frames[next_frame_idx]
+                        if next_frame.labels is None:
+                            continue
+
+                        # Figure out index of label(-candidates) in next frame.
+                        for other_label_idx, other_label in enumerate(next_frame.labels):
+                            if other_label == label:
+                                x, y = next_frame.xs[other_label_idx], next_frame.ys[other_label_idx]
+                                distance = math.sqrt((label_x - x) ** 2.0 + (label_y - y) ** 2.0)
+                                candidates.append((distance, next_frame_idx, (x, y)))
+                        if candidates:
+                            break
+                    if not candidates:
+                        continue
+                    # Now remember the line for the nearest next label.
+                    distance, next_frame_idx, (x, y) = sorted(candidates)[0]
+                    # And interpolate all frames in between.
+                    interpolation_per_frame = 1.0 / float(next_frame_idx - frame_idx)
+                    for f, interpolation_frame_idx in enumerate(range(frame_idx + 1, next_frame_idx)):
+                        next_frame = self._frames[interpolation_frame_idx]
+                        interpolation = f * interpolation_per_frame
+                        x = label_x + (x - label_x) * interpolation
+                        y = label_y + (y - label_y) * interpolation
+
+                        if not next_frame._paths:
+                            next_frame._paths = {}
+                        # Check if better path was found.
+                        if label in next_frame._paths:
+                            if distance >= next_frame._paths[label][0]:
+                                break
+                        new_path = (distance, current_path[1] + [x, y])
+                        next_frame._paths[label] = new_path
+                        current_path = new_path
 
         # Some options can be set for all frames through the video options.
         for property in ("_crop_coordinates", "_scale"):
