@@ -54,7 +54,7 @@ def adjust_cropping_window(xs, ys, scale, keepaspect=True, padding=600):
     return left, top, right, bottom
 
 
-@utils.buffer_object_cacher(key=lambda frame, scale: (frame.frame_id, scale), maxsize=16)
+@utils.buffer_object_cacher(key=lambda frame, scale: (frame.frame_id, scale), maxsize=8)
 def extract_single_frame(frame, scale):
     """
     Extracts the image belonging to a `Frame`-object.
@@ -82,7 +82,7 @@ def extract_single_frame(frame, scale):
             buf.seek(0)
             return buf
 
-@utils.buffer_object_cacher(key=lambda framecontainer, scale: (framecontainer.video_path, scale), maxsize=32)
+@utils.buffer_object_cacher(key=lambda framecontainer, scale: (framecontainer.video_path, scale), maxsize=4)
 def extract_frames(framecontainer, scale):
     """
     Extracts all frame-images of the corresponding video file of a FrameContainer.
