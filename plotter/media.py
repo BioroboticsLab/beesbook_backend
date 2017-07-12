@@ -248,14 +248,16 @@ class FramePlotter(api.FramePlotter):
         ax.imshow(image)
         ax.axis('off')
 
-        if self.xs is not None and self.ys is not None:
-            width = image.shape[1]
-            height = image.shape[0]
+        # To be able to specify a size independent of the resolution.
+        width = image.shape[1]
+        height = image.shape[0]
+        if self.crop_coordinates:
+            x, y, x2, y2 = self.crop_coordinates
+            width = x2 - x
+            height = y2 - y
+        width_factor = 1.0 / (width / self.scale / config.width)
 
-            if self.crop_coordinates:
-                x, y, x2, y2 = self.crop_coordinates
-                width = x2 - x
-                height = y2 - y
+        if self.xs is not None and self.ys is not None:
             # Draw arrows if rotation is given.
             if self.angles is not None:
                 rotations = np.array([rotate_direction_vec(rot, self.scale) for rot in self.angles])
@@ -272,7 +274,7 @@ class FramePlotter(api.FramePlotter):
                     size = 2.0 * float(radius[idx][0])
                     # Adjust for cropping region.
                     # Usually the markersize scales with the window.
-                    size /= width / self.scale / config.width
+                    size *= width_factor
                     # Calcluate area, adjusted for scaling factor.
                     size = (size * self.scale) ** 2.0
                     ax.scatter(self.ys[idx], self.xs[idx], facecolors='none', edgecolors=unique_color, marker="o",
@@ -284,15 +286,25 @@ class FramePlotter(api.FramePlotter):
                             continue
                         ax.text(self.ys[idx][i], self.xs[idx][i], label_i, color=unique_color, fontsize=int(72 * self.scale), alpha=0.5)
         if self._paths is not None:
-            for label, path in self._paths.items():
+            for label, (distance, path) in self._paths.items():
                 path = np.array(path)
                 color = "k"
                 try:
-                    label_idx = self.labels.index(label)
+                    label_idx = np.argwhere(self.labels == label)[0][0]
                     color = self.colors[label_idx]
                 except:
                     pass
-                ax.plot(path[:,1], path[:,0], color=color, alpha=0.5)
+                # Plot the path in segments to allow fading alpha.
+                # Use bigger steps for better performance.
+                last_end = path.shape[0]
+                stepsize = 10 if last_end > 20 else 4
+                steps = list(reversed(range(0, last_end, stepsize)))
+                alpha = 0.5 * (1.0 - 0.1 * np.arange(len(steps)))
+                alpha[alpha < 0.1] = 0.1
+                
+                for step_i, step in enumerate(steps):
+                    ax.plot(path[step:last_end,1], path[step:last_end,0], color=color, linewidth=10.0 / width_factor * self.scale, alpha=alpha[step_i])
+                    last_end = step + 1
         if self.title is not None:
             txt = plt.text(0.1, 0.9, self.title, size=int(108 * self.scale), color='white', transform=ax.transAxes, horizontalalignment='left')
             txt.set_path_effects([matplotlib.patheffects.withStroke(linewidth=5, foreground='k')])
@@ -381,25 +393,30 @@ class VideoPlotter(api.VideoPlotter):
                     continue
                 if not frame._paths:
                     frame._paths = {}
-                # For every label in the current frame..
-                for label_idx, label in frame.labels:
-                    current_path = (math.inf, [])
-                    if label in frame._paths:
-                        current_path = frame._paths[label]
-
+                # For every label in the current frame, find the closest matching
+                # label in the next frames.
+                for label_idx, label in enumerate(frame.labels):
                     candidates = []
                     label_x, label_y = frame.xs[label_idx], frame.ys[label_idx]
-                    # .. find fitting label in the next frames.
+                    # Need to start a new path?
+                    current_path = (math.inf, [[label_x, label_y]])
+                    if label in frame._paths:
+                        current_path = frame._paths[label]
+                    
                     for next_frame_idx in range(frame_idx + 1, len(self._frames)):
                         next_frame = self._frames[next_frame_idx]
                         if next_frame.labels is None:
                             continue
+                        frame_distance = next_frame_idx - frame_idx
 
                         # Figure out index of label(-candidates) in next frame.
                         for other_label_idx, other_label in enumerate(next_frame.labels):
                             if other_label == label:
                                 x, y = next_frame.xs[other_label_idx], next_frame.ys[other_label_idx]
                                 distance = math.sqrt((label_x - x) ** 2.0 + (label_y - y) ** 2.0)
+                                # Allow only a sensible distance to prevent lines from jumping.
+                                if distance > (frame_distance * 100.0):
+                                    continue
                                 candidates.append((distance, next_frame_idx, (x, y)))
                         if candidates:
                             break
@@ -409,11 +426,11 @@ class VideoPlotter(api.VideoPlotter):
                     distance, next_frame_idx, (x, y) = sorted(candidates)[0]
                     # And interpolate all frames in between.
                     interpolation_per_frame = 1.0 / float(next_frame_idx - frame_idx)
-                    for f, interpolation_frame_idx in enumerate(range(frame_idx + 1, next_frame_idx)):
+                    for f, interpolation_frame_idx in enumerate(range(frame_idx + 1, next_frame_idx + 1)):
                         next_frame = self._frames[interpolation_frame_idx]
-                        interpolation = f * interpolation_per_frame
-                        x = label_x + (x - label_x) * interpolation
-                        y = label_y + (y - label_y) * interpolation
+                        interpolation = (f + 1) * interpolation_per_frame
+                        _x = label_x + (x - label_x) * interpolation
+                        _y = label_y + (y - label_y) * interpolation
 
                         if not next_frame._paths:
                             next_frame._paths = {}
@@ -421,7 +438,7 @@ class VideoPlotter(api.VideoPlotter):
                         if label in next_frame._paths:
                             if distance >= next_frame._paths[label][0]:
                                 break
-                        new_path = (distance, current_path[1] + [x, y])
+                        new_path = (distance, current_path[1] + [[_x, _y]])
                         next_frame._paths[label] = new_path
                         current_path = new_path
 
