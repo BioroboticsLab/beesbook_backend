@@ -299,7 +299,7 @@ class FramePlotter(api.FramePlotter):
                 last_end = path.shape[0]
                 stepsize = 10 if last_end > 20 else 4
                 steps = list(reversed(range(0, last_end, stepsize)))
-                alpha = 0.5 * (1.0 - 0.1 * np.arange(len(steps)))
+                alpha = 0.25 * (1.0 - 0.1 * np.arange(len(steps)))
                 alpha[alpha < 0.1] = 0.1
                 
                 for step_i, step in enumerate(steps):
@@ -415,7 +415,11 @@ class VideoPlotter(api.VideoPlotter):
                                 x, y = next_frame.xs[other_label_idx], next_frame.ys[other_label_idx]
                                 distance = math.sqrt((label_x - x) ** 2.0 + (label_y - y) ** 2.0)
                                 # Allow only a sensible distance to prevent lines from jumping.
-                                if distance > (frame_distance * 100.0):
+                                # Per-frame movement limit.
+                                if distance > (frame_distance * 75.0):
+                                    continue
+                                # Total gap length before a new path is started.
+                                if distance > 300.0:
                                     continue
                                 candidates.append((distance, next_frame_idx, (x, y)))
                         if candidates:
