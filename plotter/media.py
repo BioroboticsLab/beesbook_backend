@@ -316,7 +316,9 @@ class FramePlotter(api.FramePlotter):
             # Make sure that the plot is cropped at the image's bounds.
             ax.set_xlim((0, image.shape[1]))
             ax.set_ylim((0, image.shape[0]))
-        
+        # Make sure that the image's origin is the same as in the original video.
+        plt.gca().invert_yaxis()
+
         outputbuffer = utils.ReusableBytesIO()
         fig.savefig(outputbuffer, dpi=dpi, format='JPG')
         plt.close()
