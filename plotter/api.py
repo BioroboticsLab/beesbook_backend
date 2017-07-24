@@ -104,6 +104,9 @@ class VideoPlotter(_ObjectRequester):
     _fill_gaps = True
     # Whether to draw tracks defined by the labels.
     _track_labels = None
+    # Prefix that is added to all frame titles.
+    # Can be 'auto' for an automated title containing frame index, date, time and camera ID.
+    _title = None
 
     # The following attributes can overwrite frame options.
     _crop_coordinates = None
@@ -111,7 +114,7 @@ class VideoPlotter(_ObjectRequester):
 
     def __init__(self, **args):
         for property in ("frames", "crop_margin",
-                         "fill_gaps", "track_labels", "crop_coordinates", "scale"):
+                         "fill_gaps", "track_labels", "crop_coordinates", "scale", "title"):
             if property not in args:
                 continue
             setattr(self, "_" + property, args[property])
@@ -136,6 +139,7 @@ class VideoPlotter(_ObjectRequester):
             yield "track_labels", self._track_labels
             yield "crop_coordinates", self._crop_coordinates
             yield "scale", self._scale
+            yield "title", self._title
 
         for (name, value) in all_attributes():
             if value is not None:

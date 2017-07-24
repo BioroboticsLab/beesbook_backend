@@ -455,7 +455,42 @@ class VideoPlotter(api.VideoPlotter):
                 for frame in self._frames:
                     if getattr(frame, property) is None:
                         setattr(frame, property, value)
-        
+
+        # If a title prefix is specified, update the frames.
+        if self._title and len(self._frames) > 0:
+            import datetime
+            prefix = self._title
+            
+            if prefix == "auto":
+                # Figure out the cam ID - assume that all frames come from the same cam.
+                frame = Frame.objects.get(frame_id=self._frames[0].frame_id)
+                cam_id = frame.cam_id
+                # The actual frame ID and datetime will be added later.
+                prefix = "{frame_idx:4d} {datetime:}"
+                # Only the cam is fixed for all frames.
+                prefix += f" {cam_id:2d}"
+            # Whether we need to query additional metadata for the titles.
+            needs_frame_info = ("{datetime" in prefix)
+
+            for frame_idx, frame in self._frames:
+                # Fill placeholders.
+                format_args = {}
+                if "{frame_idx" in prefix:
+                    format_args["frame_idx"] = frame_idx
+                if needs_frame_info:
+                    db_frame = Frame.objects.get(frame_id=frame.frame_id)
+                    if "{datetime" in prefix:
+                        format_args["datetime"] = \
+                            datetime.datetime.fromtimestamp(db_frame.timestamp).\
+                            strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+                custom_prefix = prefix
+                if format_args:
+                    custom_prefix = custom_prefix.format(**format_args)
+
+                if frame._title:
+                    frame._title = custom_prefix + " " + frame._title
+                else:
+                    frame._title = custom_prefix
     def plot(self):
         """
         Creates a video with information of a track

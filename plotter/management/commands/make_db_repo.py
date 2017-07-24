@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
 
 from plotter.models import FrameContainer, Frame, Video
 from bb_binary import Repository, load_frame_container
@@ -20,9 +21,10 @@ class Command(BaseCommand):
             fco = FrameContainer(fc_id=fc.id, fc_path=fn, video_name=fc.dataSources[0].filename)
             fco.save()
 
-            for frame in fc.frames:
-                f = Frame(fc=fco, frame_id=frame.id, index=frame.frameIdx)
-                f.save()
+            with transaction.atomic():
+                for frame in fc.frames:
+                    f = Frame(fc=fco, frame_id=frame.id, index=frame.frameIdx, timestamp=frame.timestamp)
+                    f.save()
 
 
 

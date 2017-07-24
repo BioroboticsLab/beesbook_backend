@@ -27,6 +27,7 @@ class Frame(models.Model):
     frame_id = models.DecimalField(max_digits=32, decimal_places=0, primary_key=True)
     fc = models.ForeignKey(FrameContainer)
     index = models.IntegerField()
+    timestamp = models.FloatField()
 
     def __str__(self):
         return f'{self.frame_id} - {self.index}'
@@ -50,6 +51,15 @@ class Frame(models.Model):
         if extract == 'all':
             all_images = media.extract_frames(framecontainer=self.fc, scale=scale)
             return all_images[self.frame_id]
+
+    @property
+    def cam_id(self):
+        videoname = self.fc.video_name
+        assert videoname[0:4] == "Cam_"
+        cam_id = int(videoname[4])
+        assert (cam_id >= 0)
+        assert (cam_id <= 3)
+        return cam_id
 
     @staticmethod
     def get_video(frame_ids, scale=0.5):
