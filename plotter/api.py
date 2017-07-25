@@ -32,7 +32,7 @@ class FramePlotter(_ObjectRequester):
     # The following attributes are global image attributes.
     _frame_id = None         # bb_binary frame id.
     _title = None            # Text to plot in the upper left corner.
-    _scale = 0.5             # Resizing of the image prior to plotting.
+    _scale = None            # Resizing of the image prior to plotting.
     _crop_coordinates = None # Allows displaying only a small part of the image.
 
     # The following attributes are vectors.

@@ -181,14 +181,14 @@ class FramePlotter(api.FramePlotter):
         if not self._xs:
             return None
         if self._xs_scaled is None:
-            self._xs_scaled = (np.array(self._xs) * self._scale).astype(np.int)
+            self._xs_scaled = (np.array(self._xs) * self.scale).astype(np.int)
         return self._xs_scaled
     @property
     def ys(self):
         if not self._ys:
             return None
         if self._ys_scaled is None:
-            self._ys_scaled = (np.array(self._ys) * self._scale).astype(np.int)
+            self._ys_scaled = (np.array(self._ys) * self.scale).astype(np.int)
         return self._ys_scaled
     @property
     def angles(self):
@@ -215,7 +215,7 @@ class FramePlotter(api.FramePlotter):
         return self._frame_id
     @property
     def scale(self):
-        return self._scale
+        return self._scale if self._scale else 0.5
     @property
     def crop_coordinates(self):
         if self._crop_coordinates is None:
@@ -381,7 +381,7 @@ class VideoPlotter(api.VideoPlotter):
         if self._crop_margin is not None:
             scale = self._scale
             if scale is None and len(self._frames) > 0:
-                scale = self._frames[0]._scale
+                scale = self._frames[0].scale
             xs = np.array([x for frame in self._frames for x in frame._xs])
             ys = np.array([y for frame in self._frames for y in frame._ys])
             self._crop_coordinates = adjust_cropping_window(xs, ys,
@@ -468,11 +468,11 @@ class VideoPlotter(api.VideoPlotter):
                 # The actual frame ID and datetime will be added later.
                 prefix = "{frame_idx:4d} {datetime:}"
                 # Only the cam is fixed for all frames.
-                prefix += f" {cam_id:2d}"
+                prefix += f" cam {cam_id:2d}"
             # Whether we need to query additional metadata for the titles.
             needs_frame_info = ("{datetime" in prefix)
 
-            for frame_idx, frame in self._frames:
+            for frame_idx, frame in enumerate(self._frames):
                 # Fill placeholders.
                 format_args = {}
                 if "{frame_idx" in prefix:
