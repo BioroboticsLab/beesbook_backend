@@ -141,7 +141,8 @@ def extract_video(frames):
 
             cmd = config.ffmpeg_frames_to_video.format(
                 input_path=f'{tmpdir}/%04d.jpg',
-                output_path=tmpfile.name
+                output_path=tmpfile.name,
+                framerate=3
             )
             print('executing: ', cmd)
             check_output(cmd, shell=True)
@@ -227,6 +228,9 @@ class FramePlotter(api.FramePlotter):
     @property
     def height(self):
         return int(config.height* self.scale)
+    @property
+    def path_alpha(self):
+        return self._path_alpha or 0.25
 
     def plot(self, buffer):
         """
@@ -299,7 +303,7 @@ class FramePlotter(api.FramePlotter):
                 last_end = path.shape[0]
                 stepsize = 10 if last_end > 20 else 4
                 steps = list(reversed(range(0, last_end, stepsize)))
-                alpha = 0.25 * (1.0 - 0.1 * np.arange(len(steps)))
+                alpha = self.path_alpha * (1.0 - 0.1 * np.arange(len(steps)))
                 alpha[alpha < 0.1] = 0.1
                 
                 for step_i, step in enumerate(steps):
@@ -449,7 +453,7 @@ class VideoPlotter(api.VideoPlotter):
                         current_path = new_path
 
         # Some options can be set for all frames through the video options.
-        for property in ("_crop_coordinates", "_scale"):
+        for property in ("_crop_coordinates", "_scale", "_path_alpha"):
             value = getattr(self, property)
             if value is not None:
                 for frame in self._frames:
@@ -525,7 +529,8 @@ class VideoPlotter(api.VideoPlotter):
         
             input_path = os.path.join(tmpdir, '%04d.jpg')
             video_output_path = os.path.join(tmpdir, 'video.mp4')
-            cmd = config.ffmpeg_frames_to_video.format(input_path=input_path, output_path=video_output_path)
+            framerate = self._framerate or 3
+            cmd = config.ffmpeg_frames_to_video.format(input_path=input_path, output_path=video_output_path, framerate=framerate)
             print('executing: ', cmd)
             output = check_output(cmd, shell=True)
             print('Output:', output)

@@ -32,9 +32,9 @@ ffmpeg_extract_all_frames = ' '.join([
 
 ffmpeg_frames_to_video = ' '.join([
     f'{binary_location} -y -v {verbosity_level}',
-    '-r 3',  # input framerate
+    '-r {framerate}',  # input framerate
     '-i {input_path}',
-    '-r 3',  # video framerate (kinda irrelevant)
+    '-r {framerate}',  # video framerate (kinda irrelevant)
     '-pix_fmt yuv420p',
     '-vcodec h264_nvenc',
     '{output_path}'

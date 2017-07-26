@@ -34,6 +34,7 @@ class FramePlotter(_ObjectRequester):
     _title = None            # Text to plot in the upper left corner.
     _scale = None            # Resizing of the image prior to plotting.
     _crop_coordinates = None # Allows displaying only a small part of the image.
+    _path_alpha = None       # The base transparency of the paths.
 
     # The following attributes are vectors.
     _xs, _ys = None, None    # Positions of markers.
@@ -48,7 +49,8 @@ class FramePlotter(_ObjectRequester):
     def __init__(self, **args):
         for property in ("xs", "ys",
                          "angles", "sizes", "colors", "labels",
-                         "frame_id", "title", "scale", "crop_coordinates"):
+                         "frame_id", "title", "scale", "crop_coordinates",
+                         "path_alpha"):
             if property not in args:
                 continue
             setattr(self, "_" + property, args[property])
@@ -77,6 +79,7 @@ class FramePlotter(_ObjectRequester):
             yield "title", self._title
             yield "scale", self._scale
             yield "crop_coordinates", self._crop_coordinates
+            yield "path_alpha", self._path_alpha
 
         for (name, value) in all_attributes():
             if value is not None:
@@ -107,14 +110,18 @@ class VideoPlotter(_ObjectRequester):
     # Prefix that is added to all frame titles.
     # Can be 'auto' for an automated title containing frame index, date, time and camera ID.
     _title = None
+    # The framerate of the video. Realtime is 3 and higher is faster.
+    _framerate = None
 
     # The following attributes can overwrite frame options.
     _crop_coordinates = None
     _scale = None
+    _path_alpha = None
 
     def __init__(self, **args):
         for property in ("frames", "crop_margin",
-                         "fill_gaps", "track_labels", "crop_coordinates", "scale", "title"):
+                         "fill_gaps", "track_labels", "crop_coordinates", "scale", "title",
+                         "framerate", "path_alpha"):
             if property not in args:
                 continue
             setattr(self, "_" + property, args[property])
@@ -140,6 +147,8 @@ class VideoPlotter(_ObjectRequester):
             yield "crop_coordinates", self._crop_coordinates
             yield "scale", self._scale
             yield "title", self._title
+            yield "framerate", self._framerate
+            yield "path_alpha", self._path_alpha
 
         for (name, value) in all_attributes():
             if value is not None:
