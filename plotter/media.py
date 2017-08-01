@@ -192,6 +192,12 @@ class FramePlotter(api.FramePlotter):
             self._ys_scaled = (np.array(self._ys) * self.scale).astype(np.int)
         return self._ys_scaled
     @property
+    def xs_unscaled(self):
+        return self._xs
+    @property
+    def ys_unscaled(self):
+        return self._ys
+    @property
     def angles(self):
         return self._angles
     @property
@@ -403,7 +409,7 @@ class VideoPlotter(api.VideoPlotter):
                 # label in the next frames.
                 for label_idx, label in enumerate(frame.labels):
                     candidates = []
-                    label_x, label_y = frame.xs[label_idx], frame.ys[label_idx]
+                    label_x, label_y = frame.xs_unscaled[label_idx], frame.ys_unscaled[label_idx]
                     # Need to start a new path?
                     current_path = (math.inf, [[label_x, label_y]])
                     if label in frame._paths:
@@ -418,7 +424,7 @@ class VideoPlotter(api.VideoPlotter):
                         # Figure out index of label(-candidates) in next frame.
                         for other_label_idx, other_label in enumerate(next_frame.labels):
                             if other_label == label:
-                                x, y = next_frame.xs[other_label_idx], next_frame.ys[other_label_idx]
+                                x, y = next_frame.xs_unscaled[other_label_idx], next_frame.ys_unscaled[other_label_idx]
                                 distance = math.sqrt((label_x - x) ** 2.0 + (label_y - y) ** 2.0)
                                 # Allow only a sensible distance to prevent lines from jumping.
                                 # Per-frame movement limit.
