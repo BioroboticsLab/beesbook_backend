@@ -60,8 +60,9 @@ def plot_frame(request):
     
     plotter = FramePlotter.from_json(data_json)
     print(f"Requesting frame {plotter.frame_id}")
-    buffer = Frame.objects.get(frame_id=plotter.frame_id).get_image(scale=plotter.scale, extract='single')
-    buffer = plotter.plot(buffer)
+    frame = Frame.objects.get(frame_id=plotter.frame_id)
+    buffer = frame.get_image(scale=plotter.scale, extract='single')
+    buffer = plotter.plot(buffer, frame_obj=frame)
     return HttpResponse(FileWrapper(buffer), content_type='image/jpg')
 
 

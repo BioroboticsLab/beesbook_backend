@@ -166,6 +166,8 @@ class FramePlotter(api.FramePlotter):
     # Internal attributes.
     _xs_scaled = None
     _ys_scaled = None
+    _cam_id = None
+    _timestamp = None
 
     def __init__(self, **args):
         super(FramePlotter, self).__init__(**args)
@@ -237,8 +239,32 @@ class FramePlotter(api.FramePlotter):
     @property
     def path_alpha(self):
         return self._path_alpha or 0.25
+    
+    def prepare_plotting(self, frame_obj):
+        """
+            Required to be called prior to plotting. Fetches
+            certain information from the database so that a forked
+            process does not need to access the database objects or
+            the connection.
 
-    def plot(self, buffer):
+            Args:
+                frame_obj: models.Frame object
+        """
+        self._timestamp = frame_obj.timestamp
+        self._cam_id = frame_obj.cam_id
+
+    def calculate_origin(self, frame_obj):
+        
+        import datetime
+        assert self._cam_id >= 0 and self._cam_id <= 3
+        year = datetime.datetime.utcfromtimestamp(self._timestamp).year
+        
+        if year == 2016:
+            return [(0, 1), (1, 0), (0, 1), (1, 0)][self._cam_id]
+
+        return (0, 0)
+
+    def plot(self, buffer, frame_obj=None):
         """
 
         Args:
@@ -247,14 +273,19 @@ class FramePlotter(api.FramePlotter):
         Returns:
             utils.ReusableBytesIO object containing the final image
         """
-       
+        if frame_obj is not None:
+            self.prepare_plotting(frame_obj)
+        else:
+            if self._cam_id is None:
+                raise ValueError("FramePlotter.plot called without frame_obj and without having called prepare_plotting beforehand.")
+
         outputbuffer = None
 
         fig, ax = plt.subplots()
         dpi = fig.get_dpi()
         fig.set_size_inches(self.width/dpi, self.height/dpi)
         fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
-        image = plt.imread(buffer, format="JPG")
+        image = np.swapaxes(plt.imread(buffer, format="JPG"), 0, 1)
         ax.imshow(image)
         ax.axis('off')
 
@@ -309,8 +340,9 @@ class FramePlotter(api.FramePlotter):
                 last_end = path.shape[0]
                 stepsize = 10 if last_end > 20 else 4
                 steps = list(reversed(range(0, last_end, stepsize)))
-                alpha = self.path_alpha * (1.0 - 0.1 * np.arange(len(steps)))
+                alpha = 1.0 - 0.1 * np.arange(len(steps))
                 alpha[alpha < 0.1] = 0.1
+                alpha *= self.path_alpha
                 
                 for step_i, step in enumerate(steps):
                     ax.plot(path[step:last_end,1], path[step:last_end,0], color=color, linewidth=10.0 / width_factor * self.scale, alpha=alpha[step_i])
@@ -327,7 +359,11 @@ class FramePlotter(api.FramePlotter):
             ax.set_xlim((0, image.shape[1]))
             ax.set_ylim((0, image.shape[0]))
         # Make sure that the image's origin is the same as in the original video.
-        plt.gca().invert_yaxis()
+        origin = self.calculate_origin(frame_obj)
+        if origin[0] == 1:
+            plt.gca().invert_xaxis()
+        if origin[1] == 0:
+            plt.gca().invert_yaxis()
 
         outputbuffer = utils.ReusableBytesIO()
         fig.savefig(outputbuffer, dpi=dpi, format='JPG')
@@ -518,6 +554,8 @@ class VideoPlotter(api.VideoPlotter):
             if frame.frame_id not in extracted_frames:
                 extracted_frames = {**extracted_frames, **extract_frames(frame.fc, plotter.scale)}
                 assert(frame.frame_id in extracted_frames)
+            # Prepare non-fork-safe things.
+            plotter.prepare_plotting(frame)
 
             r = pool().apply_async(
                 plotter.plot,
