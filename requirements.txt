@@ -1,4 +1,4 @@
--e git+https://github.com/BioroboticsLab/bb_binary.git@0.1#egg=bb_binary
+-e git+https://github.com/BioroboticsLab/bb_binary.git
 Django<1.11
 psycopg2
 ipython>=5
