@@ -419,8 +419,8 @@ class VideoPlotter(api.VideoPlotter):
                     fids.insert(i+1, fill_frame_id)
                     # Fill data with copy of previous frame.
                     filler_frame = copy.deepcopy(self._frames[i])
-                    filler_frames._frame_id = fill_frame_id
-                    self._frames.insert(i+1, filler_frames)
+                    filler_frame._frame_id = fill_frame_id
+                    self._frames.insert(i+1, filler_frame)
                 i += 1 + len(fill_frame_ids)
 
         # Calculate auto-cropping.
