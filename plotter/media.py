@@ -352,8 +352,8 @@ class FramePlotter(api.FramePlotter):
             txt.set_path_effects([matplotlib.patheffects.withStroke(linewidth=5, foreground='k')])
         if self.crop_coordinates is not None:
             x, y, x2, y2 = self.crop_coordinates
-            ax.set_xlim((x, x2))
-            ax.set_ylim((y, y2))
+            ax.set_xlim((y, y2))
+            ax.set_ylim((x, x2))
         else:
             # Make sure that the plot is cropped at the image's bounds.
             ax.set_xlim((0, image.shape[1]))
