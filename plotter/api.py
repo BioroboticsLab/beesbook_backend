@@ -105,6 +105,9 @@ class VideoPlotter(_ObjectRequester):
     _crop_margin = None
     # Whether to automatically fill in missing frames.
     _fill_gaps = True
+    # Margin around the specified frames.
+    # This allows to e.g. get a video /around/ a supplied frame.
+    _n_frames_before_after = None
     # Whether to draw tracks defined by the labels.
     _track_labels = None
     # Prefix that is added to all frame titles.
@@ -121,7 +124,7 @@ class VideoPlotter(_ObjectRequester):
     def __init__(self, **args):
         for property in ("frames", "crop_margin",
                          "fill_gaps", "track_labels", "crop_coordinates", "scale", "title",
-                         "framerate", "path_alpha"):
+                         "framerate", "path_alpha", "n_frames_before_after"):
             if property not in args:
                 continue
             setattr(self, "_" + property, args[property])
@@ -143,6 +146,7 @@ class VideoPlotter(_ObjectRequester):
             yield "frames", self._frames
             yield "crop_margin", self._crop_margin
             yield "fill_gaps", self._fill_gaps
+            yield "n_frames_before_after", self._n_frames_before_after
             yield "track_labels", self._track_labels
             yield "crop_coordinates", self._crop_coordinates
             yield "scale", self._scale

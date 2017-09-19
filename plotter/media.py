@@ -422,6 +422,31 @@ class VideoPlotter(api.VideoPlotter):
                     filler_frame._frame_id = fill_frame_id
                     self._frames.insert(i+1, filler_frame)
                 i += 1 + len(fill_frame_ids)
+        
+        # Add frames before and after the specified frames.
+        if self._n_frames_before_after:
+            from .models import Frame
+            for idx, offset in ((0, -_n_frames_before_after-1), (-1, +_n_frames_before_after+1)):
+                fid = self._frames[idx].frame_id
+                frame = Frame.objects.get(frame_id=fid)
+                from_idx, to_idx = frame.index + offset, frame.index
+                if offset > 0:
+                    from_idx, to_idx = to_idx, from_idx
+                fill_frame_ids = (
+                    Frame.objects.filter(
+                        fc_id=frame.fc_id,
+                        index__gt=from_idx,
+                        index__lt=to_idx
+                    ).order_by('index').values_list('frame_id', flat=True)
+                )
+                if idx == 0:
+                    fill_frame_ids = reversed(fill_frame_ids)
+                for fill_frame_id in fill_frame_ids:
+                    filler_frame = copy.deepcopy(frame)
+                    filler_frame._xs = None
+                    filler_frame._ys = None
+                    filler_frame._title = None
+                    self._frames.insert(idx, filler_frame)
 
         # Calculate auto-cropping.
         if self._crop_margin is not None:
