@@ -3,6 +3,29 @@ import io
 
 server_adress = '127.0.0.1:8000'
 
+def get_image_origin(cam_id, year=2016):
+    """Returns the origin of the recorded images.
+        (0, 0) is top-left corner and (1, 1) bottom-right.
+        Origins taken from https://git.imp.fu-berlin.de/bioroboticslab/organization/wikis/Experiment%20pictures"""
+    if year == 2016:
+        return [(0, 1), (1, 0), (0, 1), (1, 0)][cam_id]
+    raise ValueError("Unknown year.")
+
+def get_plot_coordinates(x, y):
+    """Transform x, y coordinates to plot in the images' coordinate system."""
+    return y, x
+
+def transform_axis_coordinates(cam_id=None, year=2016, ax=None, origin=None):
+    """Transforms an axis (or the current axis) for plotting in the images' coordinate system."""
+    if ax is None:
+        import matplotlib.pyplot as plt
+        ax = plt.gca()
+    origin = origin or get_image_origin(cam_id, year)
+    if origin[0] == 1:
+        ax.invert_xaxis()
+    if origin[1] == 0:
+        ax.invert_yaxis()
+
 class _ObjectRequester(object):
     def execute_request(self, command, method='POST', data=None):
         import requests

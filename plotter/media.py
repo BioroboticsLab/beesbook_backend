@@ -258,11 +258,7 @@ class FramePlotter(api.FramePlotter):
         import datetime
         assert self._cam_id >= 0 and self._cam_id <= 3
         year = datetime.datetime.utcfromtimestamp(self._timestamp).year
-        
-        if year == 2016:
-            return [(0, 1), (1, 0), (0, 1), (1, 0)][self._cam_id]
-
-        return (0, 0)
+        return api.get_image_origin(self._cam_id, year)
 
     def plot(self, buffer, frame_obj=None):
         """
@@ -360,11 +356,8 @@ class FramePlotter(api.FramePlotter):
             ax.set_ylim((0, image.shape[0]))
         # Make sure that the image's origin is the same as in the original video.
         origin = self.calculate_origin(frame_obj)
-        if origin[0] == 1:
-            plt.gca().invert_xaxis()
-        if origin[1] == 0:
-            plt.gca().invert_yaxis()
-
+        api.transform_axis_coordinates(origin=origin)
+        
         outputbuffer = utils.ReusableBytesIO()
         fig.savefig(outputbuffer, dpi=dpi, format='JPG')
         plt.close()
