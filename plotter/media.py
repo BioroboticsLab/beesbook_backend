@@ -4,7 +4,7 @@ from subprocess import check_output
 import matplotlib
 import shutil
 import copy
-from multiprocessing import Pool
+import multiprocessing
 import math
 
 matplotlib.use('Agg')  # need to be executed before pyplot import, deactivates showing of plot in ipython
@@ -16,11 +16,6 @@ from PIL import Image
 from . import config
 from . import utils
 from . import api
-
-def pool():
-    if not hasattr(pool, 'p'):
-        pool.p = Pool(config.n_threads)
-    return pool.p
 
 def adjust_cropping_window(xs, ys, scale, keepaspect=True, padding=600):
     xs, ys = (xs * scale).astype(np.int), (ys * scale).astype(np.int)
@@ -564,24 +559,25 @@ class VideoPlotter(api.VideoPlotter):
         """
         from .models import Frame
 
-        results = []
-        extracted_frames = dict()
-        for plotter in self._frames:
-            frame = Frame.objects.get(frame_id=plotter.frame_id)
+        with multiprocessing.Pool(config.n_threads) as pool:
+            results = []
+            extracted_frames = dict()
+            for plotter in self._frames:
+                frame = Frame.objects.get(frame_id=plotter.frame_id)
 
-            if frame.frame_id not in extracted_frames:
-                extracted_frames = {**extracted_frames, **extract_frames(frame.fc, plotter.scale)}
-                assert(frame.frame_id in extracted_frames)
-            # Prepare non-fork-safe things.
-            plotter.prepare_plotting(frame)
+                if frame.frame_id not in extracted_frames:
+                    extracted_frames = {**extracted_frames, **extract_frames(frame.fc, plotter.scale)}
+                    assert(frame.frame_id in extracted_frames)
+                # Prepare non-fork-safe things.
+                plotter.prepare_plotting(frame)
 
-            r = pool().apply_async(
-                plotter.plot,
-                (extracted_frames[frame.frame_id],)
-            )
-            results.append(r)
+                r = pool.apply_async(
+                    plotter.plot,
+                    (extracted_frames[frame.frame_id],)
+                )
+                results.append(r)
 
-        images = [r.get() for r in results]  # wait for all
+            images = [r.get() for r in results]  # wait for all
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Write buffer to disk for ffmpeg to work.
