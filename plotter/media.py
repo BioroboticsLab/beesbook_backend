@@ -274,7 +274,7 @@ class FramePlotter(api.FramePlotter):
 
         fig, ax = plt.subplots()
         dpi = fig.get_dpi()
-        fig.set_size_inches(self.width/dpi, self.height/dpi)
+        fig.set_size_inches(self.height/dpi, self.width/dpi)
         fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
         image = np.swapaxes(plt.imread(buffer, format="JPG"), 0, 1)
         ax.imshow(image)
