@@ -359,14 +359,6 @@ class FramePlotter(api.FramePlotter):
 
         outputbuffer.seek(0)
 
-        if False and self.crop_coordinates is not None:
-            im = Image.open(outputbuffer)
-            im = im.crop(self.crop_coordinates)
-        
-            outputbuffer.seek(0)
-            im.save(outputbuffer, format='JPEG')
-            outputbuffer.seek(0)
-
         return outputbuffer
 
 
