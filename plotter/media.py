@@ -271,14 +271,7 @@ class FramePlotter(api.FramePlotter):
                 raise ValueError("FramePlotter.plot called without frame_obj and without having called prepare_plotting beforehand.")
 
         outputbuffer = None
-
-        fig, ax = plt.subplots()
-        dpi = fig.get_dpi()
-        fig.set_size_inches(self.height/dpi, self.width/dpi)
-        fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
         image = np.swapaxes(plt.imread(buffer, format="JPG"), 0, 1)
-        ax.imshow(image)
-        ax.axis('off')
 
         # To be able to specify a size independent of the resolution.
         width = image.shape[1]
@@ -288,6 +281,14 @@ class FramePlotter(api.FramePlotter):
             width = x2 - x
             height = y2 - y
         width_factor = 1.0 / (width / self.scale / config.width)
+
+        fig, ax = plt.subplots()
+        dpi = fig.get_dpi()
+        fig.set_size_inches(width/dpi * width_factor, height/dpi * width_factor)
+        fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
+        
+        ax.imshow(image)
+        ax.axis('off')
 
         if self.xs is not None and self.ys is not None:
             # Draw arrows if rotation is given.
