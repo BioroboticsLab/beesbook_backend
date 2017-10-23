@@ -342,8 +342,30 @@ class FramePlotter(api.FramePlotter):
             txt.set_path_effects([matplotlib.patheffects.withStroke(linewidth=5, foreground='k')])
         if self.crop_coordinates is not None:
             x, y, x2, y2 = self.crop_coordinates
+            # Make sure the width/height is divisible by two.
+            # This is required by some codecs.
+            if (x2 - x) % 2 == 1:
+                x2 += 1
+            if (y2 - y) % 2 == 1:
+                y2 += 1
+            w, h = x2 - x, y2 - y
+            # Make sure the window stops at the screen border.
+            if x < 0:
+                x2 -= x - 0
+                x = 0
+            if x2 > image.shape[0] - 1:
+                x -= x2 - (image.shape[0] - 1)
+                x2 = image.shape[0] - 1
+            if y < 0:
+                y2 -= y - 0
+                y = 0
+            if y2 > image.shape[1] - 1:
+                y -= y2 - (image.shape[1] - 1)
+                y2 = image.shape[1] - 1
             ax.set_xlim((y, y2))
             ax.set_ylim((x, x2))
+            assert (x2 - x) == w
+            assert (y2 - y) == h
         else:
             # Make sure that the plot is cropped at the image's bounds.
             ax.set_xlim((0, image.shape[1]))
