@@ -274,17 +274,18 @@ class FramePlotter(api.FramePlotter):
         image = np.swapaxes(plt.imread(buffer, format="JPG"), 0, 1)
 
         # To be able to specify a size independent of the resolution.
-        width = image.shape[1]
-        height = image.shape[0]
-        if self.crop_coordinates:
+        if self.crop_coordinates: # Note that X and Y are swapped.
             x, y, x2, y2 = self.crop_coordinates
-            width = x2 - x
-            height = y2 - y
-        width_factor = 1.0 / (width / self.scale / config.width)
+            width = y2 - y
+            height = x2 - x
+        else:
+            width = image.shape[1]
+            height = image.shape[0]
+        width_factor = 1.0 / (width / config.height)
 
         fig, ax = plt.subplots()
         dpi = fig.get_dpi()
-        fig.set_size_inches(width/dpi * width_factor, height/dpi * width_factor)
+        fig.set_size_inches(width/dpi, height/dpi)
         fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
         
         ax.imshow(image)
@@ -305,19 +306,16 @@ class FramePlotter(api.FramePlotter):
                     # The size is meant to be in pixels of the original video.
                     # A radius of around 25 pixels would be a tag.
                     size = 2.0 * float(radius[idx][0])
-                    # Adjust for cropping region.
-                    # Usually the markersize scales with the window.
-                    size *= width_factor
                     # Calcluate area, adjusted for scaling factor.
                     size = (size * self.scale) ** 2.0
                     ax.scatter(self.ys[idx], self.xs[idx], facecolors='none', edgecolors=unique_color, marker="o",
-                      s=size, linewidth=5 * self.scale, alpha=0.5)
+                      s=size, linewidth=max(3, 6 * self.scale * width / config.width) * self.scale, alpha=0.5)
                 # Draw marker labels if given.
                 if self.labels is not None:
                       for i, label_i in enumerate(self.labels[idx]):
                         if label_i is None or not label_i:
                             continue
-                        ax.text(self.ys[idx][i], self.xs[idx][i], label_i, color=unique_color, fontsize=int(72 * self.scale), alpha=0.5)
+                        ax.text(self.ys[idx][i], self.xs[idx][i], label_i, color=unique_color, fontsize=int(72 / width_factor), alpha=0.5)
         if self._paths is not None:
             for label, (distance, path) in self._paths.items():
                 path = np.array(path)
@@ -337,10 +335,10 @@ class FramePlotter(api.FramePlotter):
                 alpha *= self.path_alpha
                 
                 for step_i, step in enumerate(steps):
-                    ax.plot(path[step:last_end,1], path[step:last_end,0], color=color, linewidth=10.0 / width_factor * self.scale, alpha=alpha[step_i])
+                    ax.plot(path[step:last_end,1], path[step:last_end,0], color=color, linewidth=max(3, 10 * width / config.width) * self.scale, alpha=alpha[step_i])
                     last_end = step + 1
         if self.title is not None:
-            txt = plt.text(0.1, 0.9, self.title, size=int(108 * self.scale), color='white', transform=ax.transAxes, horizontalalignment='left')
+            txt = plt.text(0.1, 0.9, self.title, size=int(108 / width_factor), color='white', transform=ax.transAxes, horizontalalignment='left')
             txt.set_path_effects([matplotlib.patheffects.withStroke(linewidth=5, foreground='k')])
         if self.crop_coordinates is not None:
             x, y, x2, y2 = self.crop_coordinates
