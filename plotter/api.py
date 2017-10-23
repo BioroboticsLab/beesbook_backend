@@ -181,21 +181,19 @@ class VideoPlotter(_ObjectRequester):
             if value is not None:
                 yield (name, value)
 
-    def get_video(self, display_in_notebook=True, save_to_path=None, temppath='tmp/video_plot.mp4', display_scale=0.15):
+    def get_video(self, display_in_notebook=True, save_to_path='video_plot.mp4', display_scale=0.15):
         """
             Requests the video from the backend server.
 
             Args:
                 display_in_notebook: whether to show the video in a notebook - must be saved to disk in order to do that
-                save_to_path: path to save to video to
-                temppath: required path to store the video for displaying it in a notebook
+                save_to_path: path to save to video to; required if displaying in notebook
                 display_scale: scaling of the notebook display
 
             Returns:
                 io.BytesIO object containing the video data.
                 This object might be closed if the video was saved to disk.
         """
-        
         data = dict(video_options=self.to_json())
         buf = self.execute_request("plot_video", data=data)
         
@@ -203,9 +201,9 @@ class VideoPlotter(_ObjectRequester):
             import shutil
             with open(save_to_path, "wb") as file:
                 shutil.copyfileobj(buf, file)
-            temppath = save_to_path
             
         if display_in_notebook:
+            import random
             from IPython.display import HTML, display
             VIDEO_HTML = """
             <video style='margin: 0 auto;' width="{width}" height="{height}" controls>
@@ -213,7 +211,7 @@ class VideoPlotter(_ObjectRequester):
             </video>
             """
             display(HTML(VIDEO_HTML.format(
-                    src=temppath,
+                    src="{}?{}".format(save_to_path, random.randint(0, 99999)),
                     width=int(4000 * display_scale),
                     height=int(3000 * display_scale)
                 )))
