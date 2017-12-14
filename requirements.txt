@@ -8,3 +8,4 @@ django-extensions<1.8
 tqdm<4.12
 Pillow<4.5
 cachetools
+requests
