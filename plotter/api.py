@@ -58,6 +58,7 @@ class FramePlotter(_ObjectRequester):
     _scale = None            # Resizing of the image prior to plotting.
     _crop_coordinates = None # Allows displaying only a small part of the image.
     _path_alpha = None       # The base transparency of the paths.
+    _raw = None              # Requests a near-lossless image without plotting.
 
     # The following attributes are vectors.
     _xs, _ys = None, None    # Positions of markers.
@@ -73,7 +74,7 @@ class FramePlotter(_ObjectRequester):
         for property in ("xs", "ys",
                          "angles", "sizes", "colors", "labels",
                          "frame_id", "title", "scale", "crop_coordinates",
-                         "path_alpha"):
+                         "path_alpha", "raw"):
             if property not in args:
                 continue
             setattr(self, "_" + property, args[property])
@@ -103,6 +104,7 @@ class FramePlotter(_ObjectRequester):
             yield "scale", self._scale
             yield "crop_coordinates", self._crop_coordinates
             yield "path_alpha", self._path_alpha
+            yield "raw", self._raw
 
         for (name, value) in all_attributes():
             if value is not None:
@@ -118,7 +120,10 @@ class FramePlotter(_ObjectRequester):
         import matplotlib.pyplot as plt
         data = dict(frame_options=self.to_json())
         buf = self.execute_request("plot_frame", data=data)
-        return plt.imread(buf, format="JPG")
+        if not self._raw:
+            return plt.imread(buf, format="JPG")
+        else:
+            return np.load(buf, allow_pickle=False)
 
 class VideoPlotter(_ObjectRequester):
 

@@ -27,7 +27,7 @@ ffmpeg_extract_all_frames = ' '.join([
     '-start_number 0',
     '-vf scale=iw*{scale}:ih*{scale}',
     '-qscale:v 2',
-    '{output_path}/%04d.jpg'
+    '{output_path}/%04d.{file_format}'
 ])
 
 ffmpeg_frames_to_video = ' '.join([

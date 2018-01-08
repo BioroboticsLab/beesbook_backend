@@ -61,9 +61,11 @@ def plot_frame(request):
     plotter = FramePlotter.from_json(data_json)
     print(f"Requesting frame {plotter.frame_id}")
     frame = Frame.objects.get(frame_id=plotter.frame_id)
-    buffer = frame.get_image(scale=plotter.scale, extract='single')
+    buffer = frame.get_image(scale=plotter.scale, extract='single',
+                             format=plotter.requested_file_format())
     buffer = plotter.plot(buffer, frame_obj=frame)
-    return HttpResponse(FileWrapper(buffer), content_type='image/jpg')
+    content_type = "image/jpg" if plotter.is_plotting_required() else "application/octet-stream"
+    return HttpResponse(FileWrapper(buffer), content_type=content_type)
 
 
 @csrf_exempt

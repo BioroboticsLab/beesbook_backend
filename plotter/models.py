@@ -32,7 +32,7 @@ class Frame(models.Model):
     def __str__(self):
         return f'{self.frame_id} - {self.index}'
 
-    def get_image(self, scale=1.0, extract='single'):
+    def get_image(self, scale=1.0, extract='single', format="jpg"):
         """
         Retrieves the image, extracting it if necessary.
         Options for extract are 'single' or 'all'.
@@ -46,10 +46,10 @@ class Frame(models.Model):
             raise ValueError("extract must be either 'all' or 'single'")
 
         if extract == 'single':
-            return media.extract_single_frame(self, scale)
+            return media.extract_single_frame(self, scale, format=format)
 
         if extract == 'all':
-            all_images = media.extract_frames(framecontainer=self.fc, scale=scale)
+            all_images = media.extract_frames(framecontainer=self.fc, scale=scale, format=format)
             return all_images[self.frame_id]
 
     @property

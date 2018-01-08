@@ -49,8 +49,8 @@ def adjust_cropping_window(xs, ys, scale, keepaspect=True, padding=600):
     return left, top, right, bottom
 
 
-@utils.buffer_object_cacher(key=lambda frame, scale: (frame.frame_id, scale), maxsize=8)
-def extract_single_frame(frame, scale):
+@utils.buffer_object_cacher(key=lambda frame, scale, format: (frame.frame_id, scale, format), maxsize=3)
+def extract_single_frame(frame, scale, format="jpg"):
     """
     Extracts the image belonging to a `Frame`-object.
     Args:
@@ -60,7 +60,7 @@ def extract_single_frame(frame, scale):
         An utils.ReusableBytesIO object containing the image.
 
     """
-    with tempfile.NamedTemporaryFile(suffix=".jpg") as tmpfile:
+    with tempfile.NamedTemporaryFile(suffix="."+format) as tmpfile:
 
         cmd = config.ffmpeg_extract_single_frame.format(
             video_path=frame.fc.video_path,
@@ -77,8 +77,8 @@ def extract_single_frame(frame, scale):
             buf.seek(0)
             return buf
 
-@utils.buffer_object_cacher(key=lambda framecontainer, scale: (framecontainer.video_path, scale), maxsize=4)
-def extract_frames(framecontainer, scale):
+@utils.buffer_object_cacher(key=lambda framecontainer, scale, format: (framecontainer.video_path, scale, format), maxsize=2)
+def extract_frames(framecontainer, scale, format="jpg"):
     """
     Extracts all frame-images of the corresponding video file of a FrameContainer.
 
@@ -95,14 +95,15 @@ def extract_frames(framecontainer, scale):
     # Required frames.
     # Subset of the resulting filenames of the ffmpeg command.
     frame_set = framecontainer.frame_set
-    images = ['{:04}.jpg'.format(x) for x in frame_set.values_list('index', flat=True)]
+    images = ['{:04}.{}'.format(x, format) for x in frame_set.values_list('index', flat=True)]
     
     results = dict()
 
     with tempfile.TemporaryDirectory() as tmpdir:
 
         cmd = config.ffmpeg_extract_all_frames.format(
-            video_path=framecontainer.video_path, output_path=tmpdir, scale=scale)
+            video_path=framecontainer.video_path, output_path=tmpdir, scale=scale,
+            file_format=format)
         print('executing: ', cmd)
         output = check_output(cmd, shell=True)
         print('output:', output)
@@ -224,7 +225,7 @@ class FramePlotter(api.FramePlotter):
     def crop_coordinates(self):
         if self._crop_coordinates is None:
             return self._crop_coordinates
-        return list(np.array(self._crop_coordinates) * self.scale)
+        return list((np.array(self._crop_coordinates) * self.scale).astype(np.int))
     @property
     def width(self):
         return int(config.width * self.scale)
@@ -235,6 +236,18 @@ class FramePlotter(api.FramePlotter):
     def path_alpha(self):
         return self._path_alpha or 0.25
     
+    def requested_file_format(self):
+        """
+            The file format to be returned by ffmpeg.
+        """
+        return "jpg" if not self._raw else "bmp"
+
+    def is_plotting_required(self):
+        """
+            Whether matplotlib has to be used to prepare the image.
+        """
+        return not self._raw
+
     def prepare_plotting(self, frame_obj):
         """
             Required to be called prior to plotting. Fetches
@@ -271,7 +284,9 @@ class FramePlotter(api.FramePlotter):
                 raise ValueError("FramePlotter.plot called without frame_obj and without having called prepare_plotting beforehand.")
 
         outputbuffer = None
-        image = np.swapaxes(plt.imread(buffer, format="JPG"), 0, 1)
+        format = self.requested_file_format().upper()
+        image = plt.imread(buffer, format=format)
+        image = np.swapaxes(image, 0, 1)
 
         # To be able to specify a size independent of the resolution.
         if self.crop_coordinates: # Note that X and Y are swapped.
@@ -283,63 +298,71 @@ class FramePlotter(api.FramePlotter):
             height = image.shape[0]
         width_factor = 1.0 / (width / config.height)
 
-        fig, ax = plt.subplots()
-        dpi = fig.get_dpi()
-        fig.set_size_inches(width/dpi, height/dpi)
-        fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
-        
-        ax.imshow(image)
-        ax.axis('off')
+        is_plotting_required = self.is_plotting_required()
 
-        if self.xs is not None and self.ys is not None:
-            # Draw arrows if rotation is given.
-            if self.angles is not None:
-                rotations = np.array([rotate_direction_vec(rot, self.scale) for rot in self.angles])
-                ax.quiver(self.ys, self.xs, rotations[:, 1], rotations[:, 0], scale=0.45 / self.scale, color=self.colors, units='xy', alpha=0.5)
+        if is_plotting_required:
+            fig, ax = plt.subplots()
+            dpi = fig.get_dpi()
+            fig.set_size_inches(width/dpi, height/dpi)
+            fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # removes white margin
             
-            for unique_color in np.unique(self.colors):
-                idx = self.colors == unique_color
+            ax.imshow(image)
+            ax.axis('off')
+        else:
+            image = image[:, :, 0]
+        
+        # The actual plotting.
+        if is_plotting_required:
+            if self.xs is not None and self.ys is not None:
+                # Draw arrows if rotation is given.
+                if self.angles is not None:
+                    rotations = np.array([rotate_direction_vec(rot, self.scale) for rot in self.angles])
+                    ax.quiver(self.ys, self.xs, rotations[:, 1], rotations[:, 0], scale=0.45 / self.scale, color=self.colors, units='xy', alpha=0.5)
+            
+                for unique_color in np.unique(self.colors):
+                    idx = self.colors == unique_color
 
-                # Draw scatterplot if radius is given.
-                if self.sizes is not None:
-                    radius = np.array(self.sizes)
-                    # The size is meant to be in pixels of the original video.
-                    # A radius of around 25 pixels would be a tag.
-                    size = 2.0 * float(radius[idx][0])
-                    # Calcluate area, adjusted for scaling factor.
-                    size = (size * self.scale) ** 2.0
-                    ax.scatter(self.ys[idx], self.xs[idx], facecolors='none', edgecolors=unique_color, marker="o",
-                      s=size, linewidth=max(3, 6 * self.scale * width / config.width) * self.scale, alpha=0.5)
-                # Draw marker labels if given.
-                if self.labels is not None:
-                      for i, label_i in enumerate(self.labels[idx]):
-                        if label_i is None or not label_i:
-                            continue
-                        ax.text(self.ys[idx][i], self.xs[idx][i], label_i, color=unique_color, fontsize=int(72 / width_factor), alpha=0.5)
-        if self._paths is not None:
-            for label, (distance, path) in self._paths.items():
-                path = np.array(path)
-                color = "k"
-                try:
-                    label_idx = np.argwhere(self.labels == label)[0][0]
-                    color = self.colors[label_idx]
-                except:
-                    pass
-                # Plot the path in segments to allow fading alpha.
-                # Use bigger steps for better performance.
-                last_end = path.shape[0]
-                stepsize = 10 if last_end > 20 else 4
-                steps = list(reversed(range(0, last_end, stepsize)))
-                alpha = 1.0 - 0.1 * np.arange(len(steps))
-                alpha[alpha < 0.1] = 0.1
-                alpha *= self.path_alpha
+                    # Draw scatterplot if radius is given.
+                    if self.sizes is not None:
+                        radius = np.array(self.sizes)
+                        # The size is meant to be in pixels of the original video.
+                        # A radius of around 25 pixels would be a tag.
+                        size = 2.0 * float(radius[idx][0])
+                        # Calcluate area, adjusted for scaling factor.
+                        size = (size * self.scale) ** 2.0
+                        ax.scatter(self.ys[idx], self.xs[idx], facecolors='none', edgecolors=unique_color, marker="o",
+                          s=size, linewidth=max(3, 6 * self.scale * width / config.width) * self.scale, alpha=0.5)
+                    # Draw marker labels if given.
+                    if self.labels is not None:
+                          for i, label_i in enumerate(self.labels[idx]):
+                            if label_i is None or not label_i:
+                                continue
+                            ax.text(self.ys[idx][i], self.xs[idx][i], label_i, color=unique_color, fontsize=int(72 / width_factor), alpha=0.5)
+            if self._paths is not None:
+                for label, (distance, path) in self._paths.items():
+                    path = np.array(path) * self.scale
+                    color = "k"
+                    try:
+                        label_idx = np.argwhere(self.labels == label)[0][0]
+                        color = self.colors[label_idx]
+                    except:
+                        pass
+                    # Plot the path in segments to allow fading alpha.
+                    # Use bigger steps for better performance.
+                    last_end = path.shape[0]
+                    stepsize = 10 if last_end > 20 else 4
+                    steps = list(reversed(range(0, last_end, stepsize)))
+                    alpha = 1.0 - 0.1 * np.arange(len(steps))
+                    alpha[alpha < 0.1] = 0.1
+                    alpha *= self.path_alpha
                 
-                for step_i, step in enumerate(steps):
-                    ax.plot(path[step:last_end,1], path[step:last_end,0], color=color, linewidth=max(3, 10 * width / config.width) * self.scale, alpha=alpha[step_i])
-                    last_end = step + 1
-        if self.title is not None:
-            txt = plt.text(0.1, 0.9, self.title, size=int(108 / width_factor), color='white', transform=ax.transAxes, horizontalalignment='left')
-            txt.set_path_effects([matplotlib.patheffects.withStroke(linewidth=5, foreground='k')])
+                    for step_i, step in enumerate(steps):
+                        ax.plot(path[step:last_end,1], path[step:last_end,0], color=color, linewidth=max(3, 10 * width / config.width) * self.scale, alpha=alpha[step_i])
+                        last_end = step + 1
+            if self.title is not None:
+                txt = plt.text(0.1, 0.9, self.title, size=int(108 / width_factor), color='white', transform=ax.transAxes, horizontalalignment='left')
+                txt.set_path_effects([matplotlib.patheffects.withStroke(linewidth=5, foreground='k')])
+        
         if self.crop_coordinates is not None:
             x, y, x2, y2 = self.crop_coordinates
             # Make sure the width/height is divisible by two.
@@ -362,22 +385,33 @@ class FramePlotter(api.FramePlotter):
             if y2 > image.shape[1] - 1:
                 y -= y2 - (image.shape[1] - 1)
                 y2 = image.shape[1] - 1
-            ax.set_xlim((y, y2))
-            ax.set_ylim((x, x2))
+            if is_plotting_required:
+                ax.set_xlim((y, y2))
+                ax.set_ylim((x, x2))
+            else:
+                image = image[x:x2, y:y2]
             assert (x2 - x) == w
             assert (y2 - y) == h
-        else:
+        elif is_plotting_required:
             # Make sure that the plot is cropped at the image's bounds.
             ax.set_xlim((0, image.shape[1]))
             ax.set_ylim((0, image.shape[0]))
         # Make sure that the image's origin is the same as in the original video.
         origin = self.calculate_origin(frame_obj)
-        api.transform_axis_coordinates(origin=origin)
-        
-        outputbuffer = utils.ReusableBytesIO()
-        fig.savefig(outputbuffer, dpi=dpi, format='JPG')
-        plt.close()
+        if is_plotting_required:
+            api.transform_axis_coordinates(origin=origin)
+        else:
+            if origin[0] == 1:
+                image = image[:, ::-1]
+            if origin[1] != 0:
+                image = image[::-1, :]
 
+        outputbuffer = utils.ReusableBytesIO()
+        if is_plotting_required:
+            fig.savefig(outputbuffer, dpi=dpi, format='JPG')
+            plt.close()
+        else:
+            np.save(outputbuffer, image, allow_pickle=False)
         outputbuffer.seek(0)
 
         return outputbuffer
@@ -427,8 +461,9 @@ class VideoPlotter(api.VideoPlotter):
         # Add frames before and after the specified frames.
         if self._n_frames_before_after:
             from .models import Frame
-            for idx, offset in ((0, -_n_frames_before_after-1), (-1, +_n_frames_before_after+1)):
-                fid = self._frames[idx].frame_id
+            for idx, offset in ((0, -self._n_frames_before_after-1), (-1, +self._n_frames_before_after+1)):
+                frame_plotter = self._frames[idx]
+                fid = frame_plotter.frame_id
                 frame = Frame.objects.get(frame_id=fid)
                 from_idx, to_idx = frame.index + offset, frame.index
                 if offset > 0:
@@ -443,7 +478,8 @@ class VideoPlotter(api.VideoPlotter):
                 if idx == 0:
                     fill_frame_ids = reversed(fill_frame_ids)
                 for fill_frame_id in fill_frame_ids:
-                    filler_frame = copy.deepcopy(frame)
+                    filler_frame = copy.deepcopy(frame_plotter)
+                    filler_frame._frame_id = fill_frame_id
                     filler_frame._xs = None
                     filler_frame._ys = None
                     filler_frame._title = None
@@ -603,7 +639,19 @@ class VideoPlotter(api.VideoPlotter):
             framerate = self._framerate or 3
             cmd = config.ffmpeg_frames_to_video.format(input_path=input_path, output_path=video_output_path, framerate=framerate)
             print('executing: ', cmd)
-            output = check_output(cmd, shell=True)
+            try:
+                output = check_output(cmd, shell=True)
+            except Exception as e:
+                # What went wrong? Check image files.
+                sizes = set()
+                for idx in range(len(images)):
+                    im = Image.open(os.path.join(tmpdir, f'{idx:04d}.jpg'))
+                    sizes.add(im.size)
+                if len(sizes) > 1:
+                    print("Warning! Mismatching image sizes: {}".format(str(sizes)))
+                else:
+                    print("Image size: {}".format(str(sizes)))
+                raise
             print('Output:', output)
 
             with open(video_output_path, "rb") as file:
