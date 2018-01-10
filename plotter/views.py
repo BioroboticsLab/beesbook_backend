@@ -61,7 +61,9 @@ def plot_frame(request):
     plotter = FramePlotter.from_json(data_json)
     print(f"Requesting frame {plotter.frame_id}")
     frame = Frame.objects.get(frame_id=plotter.frame_id)
-    buffer = frame.get_image(scale=plotter.scale, extract='single',
+    # Allow pre-caching for frames even when only one is requested.
+    extraction_type = "single" if not plotter.decode_all_frames else "all"
+    buffer = frame.get_image(scale=plotter.scale, extract=extraction_type,
                              format=plotter.requested_file_format())
     buffer = plotter.plot(buffer, frame_obj=frame)
     content_type = "image/jpg" if plotter.is_plotting_required() else "application/octet-stream"

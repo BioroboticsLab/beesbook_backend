@@ -235,7 +235,10 @@ class FramePlotter(api.FramePlotter):
     @property
     def path_alpha(self):
         return self._path_alpha or 0.25
-    
+    @property
+    def decode_all_frames(self):
+        return not not self._decode_all_frames
+
     def requested_file_format(self):
         """
             The file format to be returned by ffmpeg.
