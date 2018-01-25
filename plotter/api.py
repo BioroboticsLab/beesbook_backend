@@ -119,12 +119,13 @@ class FramePlotter(_ObjectRequester):
             Returns:
                 numpy array containing the image
         """
-        import matplotlib.pyplot as plt
         data = dict(frame_options=self.to_json())
         buf = self.execute_request("plot_frame", data=data)
         if not self._raw:
+            import matplotlib.pyplot as plt
             return plt.imread(buf, format="JPG")
         else:
+            import numpy as np
             return np.load(buf, allow_pickle=False)
 
 class VideoPlotter(_ObjectRequester):
