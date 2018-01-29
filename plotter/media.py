@@ -49,7 +49,7 @@ def adjust_cropping_window(xs, ys, scale, keepaspect=True, padding=600):
     return left, top, right, bottom
 
 
-@utils.buffer_object_cacher(key=lambda frame, scale, format: (frame.frame_id, scale, format), maxsize=3)
+@utils.buffer_object_cacher(key=lambda frame, scale, format="jpg": (frame.frame_id, scale, format), maxsize=3)
 def extract_single_frame(frame, scale, format="jpg"):
     """
     Extracts the image belonging to a `Frame`-object.
@@ -77,7 +77,7 @@ def extract_single_frame(frame, scale, format="jpg"):
             buf.seek(0)
             return buf
 
-@utils.buffer_object_cacher(key=lambda framecontainer, scale, format: (framecontainer.video_path, scale, format), maxsize=2)
+@utils.buffer_object_cacher(key=lambda framecontainer, scale, format="jpg": (framecontainer.video_path, scale, format), maxsize=2)
 def extract_frames(framecontainer, scale, format="jpg"):
     """
     Extracts all frame-images of the corresponding video file of a FrameContainer.
@@ -319,7 +319,7 @@ class FramePlotter(api.FramePlotter):
             if self.xs is not None and self.ys is not None:
                 # Draw arrows if rotation is given.
                 if self.angles is not None:
-                    rotations = np.array([rotate_direction_vec(rot, self.scale) for rot in self.angles])
+                    rotations = np.array([rotate_direction_vec(rot, self.scale) for rot in self.angles]) * 10.0
                     ax.quiver(self.ys, self.xs, rotations[:, 1], rotations[:, 0], scale=0.45 / self.scale, color=self.colors, units='xy', alpha=0.5)
             
                 for unique_color in np.unique(self.colors):
@@ -493,8 +493,8 @@ class VideoPlotter(api.VideoPlotter):
             scale = self._scale
             if scale is None and len(self._frames) > 0:
                 scale = self._frames[0].scale
-            xs = np.array([x for frame in self._frames for x in frame._xs])
-            ys = np.array([y for frame in self._frames for y in frame._ys])
+            xs = np.array([x for frame in self._frames if frame._xs is not None for x in frame._xs])
+            ys = np.array([y for frame in self._frames if frame._ys is not None for y in frame._ys])
             self._crop_coordinates = adjust_cropping_window(xs, ys,
                                         scale=scale, padding=self._crop_margin)
 
