@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/1.10/ref/settings/
 """
 
 import os
+from django.utils.log import DEFAULT_LOGGING
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -23,9 +24,13 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = 'z@_^a@z7he&pt2fap$jbsecl=#_&^bb8+(u7*8p4wdiombed9^'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['tonic.imp.fu-berlin.de', 'localhost', '127.0.0.1',
+                 'thekla.imp.fu-berlin.de', '160.45.112.183']
+
+# Still log everything when not in debug mode.
+DEFAULT_LOGGING['handlers']['console']['filters'] = []
 
 # increase maximal postable data
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440*5
@@ -85,7 +90,8 @@ DATABASES = {
         'USER': 'postgres',
         'PASSWORD': 'postgres',
         'HOST': 'localhost',
-        'PORT': '5432'
+        'PORT': '5432',
+        'OPTIONS': { 'application_name': 'bb_backend' }
     }
 }
 
