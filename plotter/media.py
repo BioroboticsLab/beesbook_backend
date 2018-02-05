@@ -238,6 +238,9 @@ class FramePlotter(api.FramePlotter):
     @property
     def decode_all_frames(self):
         return not not self._decode_all_frames
+    @property
+    def no_rotate(self):
+        return not not self._no_rotate
 
     def requested_file_format(self):
         """
@@ -400,14 +403,15 @@ class FramePlotter(api.FramePlotter):
             ax.set_xlim((0, image.shape[1]))
             ax.set_ylim((0, image.shape[0]))
         # Make sure that the image's origin is the same as in the original video.
-        origin = self.calculate_origin(frame_obj)
-        if is_plotting_required:
-            api.transform_axis_coordinates(origin=origin)
-        else:
-            if origin[0] == 1:
-                image = image[:, ::-1]
-            if origin[1] != 0:
-                image = image[::-1, :]
+        if not self.no_rotate:
+            origin = self.calculate_origin(frame_obj)
+            if is_plotting_required:
+                api.transform_axis_coordinates(origin=origin)
+            else:
+                if origin[0] == 1:
+                    image = image[:, ::-1]
+                if origin[1] != 0:
+                    image = image[::-1, :]
 
         outputbuffer = utils.ReusableBytesIO()
         if is_plotting_required:
