@@ -23,8 +23,8 @@ def adjust_cropping_window(xs, ys, scale, keepaspect=True, padding=600):
 
     width, height = int(config.width * scale), int(config.height * scale)
 
-    left, top, right, bottom = ys.min()-padding, xs.min()-padding,\
-                               ys.max()+padding, xs.max()+padding
+    left, top, right, bottom = xs.min()-padding, ys.min()-padding,\
+                               xs.max()+padding, ys.max()+padding
     
     if keepaspect:
         aspect = width / height
@@ -490,13 +490,10 @@ class VideoPlotter(api.VideoPlotter):
 
         # Calculate auto-cropping.
         if self._crop_margin is not None:
-            scale = self._scale
-            if scale is None and len(self._frames) > 0:
-                scale = self._frames[0].scale
-            xs = np.array([x for frame in self._frames if frame._xs is not None for x in frame._xs])
-            ys = np.array([y for frame in self._frames if frame._ys is not None for y in frame._ys])
+            xs = np.array([x for frame in self._frames for x in frame._xs])
+            ys = np.array([y for frame in self._frames for y in frame._ys])
             self._crop_coordinates = adjust_cropping_window(xs, ys,
-                                        scale=scale, padding=self._crop_margin)
+                                        scale=1.0, padding=self._crop_margin)
 
         # Calculate tracks based on the labels.
         if self._track_labels:
