@@ -412,6 +412,16 @@ class FramePlotter(api.FramePlotter):
                     image = image[:, ::-1]
                 if origin[1] != 0:
                     image = image[::-1, :]
+        else:
+            # Swap the image back so that it's in the original x/y space.
+            # It's done here again instead of not doing it in the beginning to
+            # unify all coordinate actions for both cases.
+            if not is_plotting_required:
+                image = np.swapaxes(image, 1, 0)
+            else:
+                # The axes of the plot would need to be swapped.
+                # Todo if combination of raw=False and no_rotate=True is required.
+                pass
 
         outputbuffer = utils.ReusableBytesIO()
         if is_plotting_required:

@@ -59,7 +59,7 @@ class FramePlotter(_ObjectRequester):
     _crop_coordinates = None # Allows displaying only a small part of the image.
     _path_alpha = None       # The base transparency of the paths.
     _raw = None              # Requests a near-lossless image without plotting.
-    _no_rotate = None        # The image won't be rotated to hive coordinates.
+    _no_rotate = None        # The image won't be rotated to hive coordinates (use with raw=True).
     _decode_all_frames = None # Whether to decode and cache the complete video. 
 
     # The following attributes are vectors.
