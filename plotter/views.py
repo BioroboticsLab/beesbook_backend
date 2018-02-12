@@ -59,12 +59,16 @@ def plot_frame(request):
         raise HttpResponseBadRequest('`frame_options` parameter required')
     
     plotter = FramePlotter.from_json(data_json)
-    print(f"Requesting frame {plotter.frame_id}")
     frame = Frame.objects.get(frame_id=plotter.frame_id)
     # Allow pre-caching for frames even when only one is requested.
-    extraction_type = "single" if not plotter.decode_all_frames else "all"
+    extraction_type = "single"
+    if plotter.decode_all_frames:
+        extraction_type = "all"
+    elif plotter.decode_n_frames is not None:
+        extraction_type = "n"
+    print(f"Requesting frame {plotter.frame_id}\t(extraction type: {extraction_type}, {plotter.decode_n_frames})")
     buffer = frame.get_image(scale=plotter.scale, extract=extraction_type,
-                             format=plotter.requested_file_format())
+                            format=plotter.requested_file_format(), extract_n_frames=plotter.decode_n_frames)
     buffer = plotter.plot(buffer, frame_obj=frame)
     content_type = "image/jpg" if plotter.is_plotting_required() else "application/octet-stream"
     return HttpResponse(FileWrapper(buffer), content_type=content_type)

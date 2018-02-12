@@ -61,6 +61,7 @@ class FramePlotter(_ObjectRequester):
     _raw = None              # Requests a near-lossless image without plotting.
     _no_rotate = None        # The image won't be rotated to hive coordinates (use with raw=True).
     _decode_all_frames = None # Whether to decode and cache the complete video. 
+    _decode_n_frames = None  # Whether to decode and cache the subsequent n frames.
 
     # The following attributes are vectors.
     _xs, _ys = None, None    # Positions of markers.
@@ -76,7 +77,7 @@ class FramePlotter(_ObjectRequester):
         for property in ("xs", "ys",
                          "angles", "sizes", "colors", "labels",
                          "frame_id", "title", "scale", "crop_coordinates",
-                         "path_alpha", "raw", "no_rotate", "decode_all_frames"):
+                         "path_alpha", "raw", "no_rotate", "decode_all_frames", "decode_n_frames"):
             if property not in args:
                 continue
             setattr(self, "_" + property, args[property])
@@ -109,6 +110,7 @@ class FramePlotter(_ObjectRequester):
             yield "raw", self._raw
             yield "no_rotate", self._no_rotate
             yield "decode_all_frames", self._decode_all_frames
+            yield "decode_n_frames", self._decode_n_frames
 
         for (name, value) in all_attributes():
             if value is not None:

@@ -81,13 +81,15 @@ def extract_single_frame(frame, scale, format="jpg"):
     buf = frame_path_cacher.get_image_buffer((frame.frame_id, scale, format))
     return buf
 
-def extract_frames(framecontainer, scale, format="jpg"):
+def extract_frames(framecontainer, scale, format="jpg", return_frame_id=None, begin_frame_id=None, number_of_frames=None):
     """
     Extracts all frame-images of the corresponding video file of a FrameContainer.
+    Optionally, extracts /number_of_frames/ frames starting by the frame with /begin_frame_id/.
 
     Args:
         framecontainer (FrameContainer): The FrameContainer which represents the video file from which the frames
          should be extracted
+         return_frame_id: If not None, only the image buffer corresponding to the given frame_id will the returned.
 
     Returns:
         Dictionary with a mapping of Frame.id to utils.ReusableBytesIO object containing the frame.
@@ -98,7 +100,27 @@ def extract_frames(framecontainer, scale, format="jpg"):
     frame_set = framecontainer.frame_set
 
     # Check if all frames are already in the cache.
-    cache_keys = [(frame.frame_id, scale, format) for frame in frame_set.all()]
+    images, cache_keys = None, None
+    if begin_frame_id is None:
+        # Fetch all frames belonging to that video.
+        cache_keys = [(frame.frame_id, scale, format) for frame in frame_set.all()]
+    else:
+        # Figure out which index to start at and then get N frames.
+        begin_frame_index = None
+        for frame in frame_set.all():
+            if frame.frame_id == begin_frame_id:
+                begin_frame_index = frame.index
+                break
+        if begin_frame_index is None:
+            raise ValueError("begin_frame_id is not contained in the frame container.")
+        # And add this subset to expected results.
+        cache_keys, images = [], []
+        for frame in frame_set.all():
+            if frame.index < begin_frame_index or frame.index >= begin_frame_index + number_of_frames:
+                continue
+            cache_keys.append((frame.frame_id, scale, format))
+            images.append('{:04}.{}'.format(frame.index - begin_frame_index, format))
+        
     cache_miss = False
     for key in cache_keys:
         if key not in frame_path_cacher:
@@ -107,13 +129,20 @@ def extract_frames(framecontainer, scale, format="jpg"):
 
     if cache_miss:
         # Extract all frames via ffmpeg.
-        images = ['{:04}.{}'.format(x, format) for x in frame_set.values_list('index', flat=True)]
+        if images is None:
+            images = ['{:04}.{}'.format(x, format) for x in frame_set.values_list('index', flat=True)]
 
         with tempfile.TemporaryDirectory() as tmpdir:
 
-            cmd = config.ffmpeg_extract_all_frames.format(
-                video_path=framecontainer.video_path, output_path=tmpdir, scale=scale,
-                file_format=format)
+            cmd = None
+            if begin_frame_id is None:
+                cmd = config.ffmpeg_extract_all_frames.format(
+                    video_path=framecontainer.video_path, output_path=tmpdir, scale=scale,
+                    file_format=format)
+            else:
+                cmd = config.ffmpeg_extract_n_frames.format(
+                    video_path=framecontainer.video_path, output_path=tmpdir, scale=scale,
+                    file_format=format, first_frame_index=begin_frame_index, number_of_frames=number_of_frames)
             print('executing: ', cmd)
             output = check_output(cmd, shell=True)
             print('output:', output)
@@ -123,8 +152,9 @@ def extract_frames(framecontainer, scale, format="jpg"):
                 
     results = dict()
     for (frame_id, scale, format) in cache_keys:
-        results[frame_id] = frame_path_cacher.get_image_buffer((frame_id, scale, format))
-        assert results[frame_id] is not None
+        if return_frame_id is None or frame_id == return_frame_id:
+            results[frame_id] = frame_path_cacher.get_image_buffer((frame_id, scale, format))
+            assert results[frame_id] is not None
     return results
 
 
@@ -250,6 +280,9 @@ class FramePlotter(api.FramePlotter):
     @property
     def decode_all_frames(self):
         return not not self._decode_all_frames
+    @property
+    def decode_n_frames(self):
+        return self._decode_n_frames
     @property
     def no_rotate(self):
         return not not self._no_rotate

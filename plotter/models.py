@@ -32,24 +32,29 @@ class Frame(models.Model):
     def __str__(self):
         return f'{self.frame_id} - {self.index}'
 
-    def get_image(self, scale=1.0, extract='single', format="jpg"):
+    def get_image(self, scale=1.0, extract='single', format="jpg", extract_n_frames=None):
         """
         Retrieves the image, extracting it if necessary.
         Options for extract are 'single' or 'all'.
         'single' extracts just that frame and returns the path.
         'all' extracts all frames of the containing framecontainer and returns the single frame.
+        'n' extracts /extract_n_frames/ frames of the containing framecontainer and returns a single frame.
 
         Returns:
             utils.ReusableBytesIO object containing the image.
         """
-        if not extract in ('single', 'all'):
-            raise ValueError("extract must be either 'all' or 'single'")
+        if not extract in ('single', 'all', 'n'):
+            raise ValueError("extract must be in {'all', 'single', 'n')")
 
         if extract == 'single':
             return media.extract_single_frame(self, scale, format=format)
 
-        if extract == 'all':
-            all_images = media.extract_frames(framecontainer=self.fc, scale=scale, format=format)
+        if extract == 'all' or extract == 'n':
+            begin_frame_id, number_of_frames = None, None
+            if extract == 'n':
+                begin_frame_id, number_of_frames = self.frame_id, extract_n_frames
+            all_images = media.extract_frames(framecontainer=self.fc, scale=scale, format=format, return_frame_id=self.frame_id,
+                                                begin_frame_id=begin_frame_id, number_of_frames=number_of_frames)
             return all_images[self.frame_id]
 
     @property
