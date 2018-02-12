@@ -17,6 +17,8 @@ from . import config
 from . import utils
 from . import api
 
+frame_path_cacher = utils.FileSystemCache(max_cache_size=2048, cache_dir=config.cache_directory)
+
 def adjust_cropping_window(xs, ys, scale, keepaspect=True, padding=600):
     xs, ys = (xs * scale).astype(np.int), (ys * scale).astype(np.int)
     padding *= scale
@@ -49,7 +51,6 @@ def adjust_cropping_window(xs, ys, scale, keepaspect=True, padding=600):
     return left, top, right, bottom
 
 
-@utils.buffer_object_cacher(key=lambda frame, scale, format="jpg": (frame.frame_id, scale, format), maxsize=3)
 def extract_single_frame(frame, scale, format="jpg"):
     """
     Extracts the image belonging to a `Frame`-object.
@@ -60,24 +61,26 @@ def extract_single_frame(frame, scale, format="jpg"):
         An utils.ReusableBytesIO object containing the image.
 
     """
-    with tempfile.NamedTemporaryFile(suffix="."+format) as tmpfile:
+    try:
+        with tempfile.NamedTemporaryFile(suffix="."+format) as tmpfile:
 
-        cmd = config.ffmpeg_extract_single_frame.format(
-            video_path=frame.fc.video_path,
-            frame_index=frame.index,
-            output_path=tmpfile.name,
-            scale=scale
-        )
-        print('executing: ', cmd)
-        output = check_output(cmd, shell=True)
-        print('output:', output)
+            cmd = config.ffmpeg_extract_single_frame.format(
+                video_path=frame.fc.video_path,
+                frame_index=frame.index,
+                output_path=tmpfile.name,
+                scale=scale
+            )
+            print('executing: ', cmd)
+            output = check_output(cmd, shell=True)
+            print('output:', output)
 
-        with open(tmpfile.name, "rb") as file:
-            buf = utils.ReusableBytesIO(file.read())
-            buf.seek(0)
-            return buf
+            frame_path_cacher.put((frame.frame_id, scale, format), tmpfile.name)
+    except FileNotFoundError:
+        # The temporary file has been moved to the cache and can not be deleted.
+        pass
+    buf = frame_path_cacher.get_image_buffer((frame.frame_id, scale, format))
+    return buf
 
-@utils.buffer_object_cacher(key=lambda framecontainer, scale, format="jpg": (framecontainer.video_path, scale, format), maxsize=2)
 def extract_frames(framecontainer, scale, format="jpg"):
     """
     Extracts all frame-images of the corresponding video file of a FrameContainer.
@@ -90,29 +93,38 @@ def extract_frames(framecontainer, scale, format="jpg"):
         Dictionary with a mapping of Frame.id to utils.ReusableBytesIO object containing the frame.
 
     """
-    video_name = framecontainer.video_name
-
     # Required frames.
     # Subset of the resulting filenames of the ffmpeg command.
     frame_set = framecontainer.frame_set
-    images = ['{:04}.{}'.format(x, format) for x in frame_set.values_list('index', flat=True)]
-    
+
+    # Check if all frames are already in the cache.
+    cache_keys = [(frame.frame_id, scale, format) for frame in frame_set.all()]
+    cache_miss = False
+    for key in cache_keys:
+        if key not in frame_path_cacher:
+            cache_miss = True
+            break
+
+    if cache_miss:
+        # Extract all frames via ffmpeg.
+        images = ['{:04}.{}'.format(x, format) for x in frame_set.values_list('index', flat=True)]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+
+            cmd = config.ffmpeg_extract_all_frames.format(
+                video_path=framecontainer.video_path, output_path=tmpdir, scale=scale,
+                file_format=format)
+            print('executing: ', cmd)
+            output = check_output(cmd, shell=True)
+            print('output:', output)
+            
+            for idx in range(len(cache_keys)):
+                frame_path_cacher.put(cache_keys[idx], os.path.join(tmpdir, images[idx]))
+                
     results = dict()
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-
-        cmd = config.ffmpeg_extract_all_frames.format(
-            video_path=framecontainer.video_path, output_path=tmpdir, scale=scale,
-            file_format=format)
-        print('executing: ', cmd)
-        output = check_output(cmd, shell=True)
-        print('output:', output)
-        
-        for idx, frame in enumerate(frame_set.all()):
-            with open(os.path.join(tmpdir, images[idx]), "rb") as file:
-                output = utils.ReusableBytesIO(file.read())
-                output.seek(0)
-                results[frame.frame_id] = output
+    for (frame_id, scale, format) in cache_keys:
+        results[frame_id] = frame_path_cacher.get_image_buffer((frame_id, scale, format))
+        assert results[frame_id] is not None
     return results
 
 

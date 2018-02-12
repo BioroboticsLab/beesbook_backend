@@ -3,7 +3,7 @@ height = 3000
 
 n_threads = 4
 gpu = True
-enable_caching = True
+cache_directory = '/mnt/raid/tempdir/backend.cache'
 
 binary_location = '/opt/bin/ffmpeg'
 
