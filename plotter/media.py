@@ -494,8 +494,8 @@ class VideoPlotter(api.VideoPlotter):
 
         # Calculate auto-cropping.
         if self._crop_margin is not None:
-            xs = np.array([x for frame in self._frames for x in frame._xs])
-            ys = np.array([y for frame in self._frames for y in frame._ys])
+            xs = np.array([x for frame in self._frames if frame._xs is not None for x in frame._xs])
+            ys = np.array([y for frame in self._frames if frame._ys is not None for y in frame._ys])
             self._crop_coordinates = adjust_cropping_window(xs, ys,
                                         scale=1.0, padding=self._crop_margin)
 
