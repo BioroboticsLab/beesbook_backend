@@ -61,24 +61,26 @@ def extract_single_frame(frame, scale, format="jpg"):
         An utils.ReusableBytesIO object containing the image.
 
     """
-    try:
-        with tempfile.NamedTemporaryFile(suffix="."+format) as tmpfile:
+    cache_key = (frame.frame_id, scale, format)
+    if cache_key not in frame_path_cacher:
+        try:
+            with tempfile.NamedTemporaryFile(suffix="."+format) as tmpfile:
 
-            cmd = config.ffmpeg_extract_single_frame.format(
-                video_path=frame.fc.video_path,
-                frame_index=frame.index,
-                output_path=tmpfile.name,
-                scale=scale
-            )
-            print('executing: ', cmd)
-            output = check_output(cmd, shell=True)
-            print('output:', output)
+                cmd = config.ffmpeg_extract_single_frame.format(
+                    video_path=frame.fc.video_path,
+                    frame_index=frame.index,
+                    output_path=tmpfile.name,
+                    scale=scale
+                )
+                print('executing: ', cmd)
+                output = check_output(cmd, shell=True)
+                print('output:', output)
 
-            frame_path_cacher.put((frame.frame_id, scale, format), tmpfile.name)
-    except FileNotFoundError:
-        # The temporary file has been moved to the cache and can not be deleted.
-        pass
-    buf = frame_path_cacher.get_image_buffer((frame.frame_id, scale, format))
+                frame_path_cacher.put(cache_key, tmpfile.name)
+        except FileNotFoundError:
+            # The temporary file has been moved to the cache and can not be deleted.
+            pass
+    buf = frame_path_cacher.get_image_buffer(cache_key)
     return buf
 
 def extract_frames(framecontainer, scale, format="jpg", return_frame_id=None, begin_frame_id=None, number_of_frames=None):
