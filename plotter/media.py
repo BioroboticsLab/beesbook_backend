@@ -551,8 +551,10 @@ class VideoPlotter(api.VideoPlotter):
         if self._crop_margin is not None:
             xs = np.array([x for frame in self._frames if frame._xs is not None for x in frame._xs])
             ys = np.array([y for frame in self._frames if frame._ys is not None for y in frame._ys])
-            self._crop_coordinates = adjust_cropping_window(xs, ys,
-                                        scale=1.0, padding=self._crop_margin)
+            
+            if len(xs) > 0 and len(ys) > 0:
+                self._crop_coordinates = adjust_cropping_window(xs, ys,
+                                            scale=1.0, padding=self._crop_margin)
 
         # Calculate tracks based on the labels.
         if self._track_labels:
