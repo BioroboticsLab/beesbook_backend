@@ -88,6 +88,7 @@ class FileSystemCache(object):
         if not done:
             raise Exception("FileSystemCache: could not move or copy file to cache location!")
 
+        self._cache_access_count += 1
         self._cache_entries[cache_keys] = [self._cache_access_count, new_file_path]
         self._check_cache_size()
         return True
@@ -96,6 +97,8 @@ class FileSystemCache(object):
         n_cache_entries = len(self._cache_entries)
         if n_cache_entries <= self._max_cache_size * self._soft_cache_limit_factor:
             return
+        print("Cache cleanup.. (size at {}/{})".format(len(self._cache_entries), self._max_cache_size * self._soft_cache_limit_factor))
+
         cachedata = [(access_time, cache_keys, file_path) for (cache_keys, (access_time, file_path)) in self._cache_entries.items()]
 
         for i, data in enumerate(sorted(cachedata)):
