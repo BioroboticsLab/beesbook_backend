@@ -271,6 +271,9 @@ class FramePlotter(api.FramePlotter):
             return self._crop_coordinates
         return list((np.array(self._crop_coordinates) * self.scale).astype(np.int))
     @property
+    def crop_mode(self):
+        return self._crop_mode or "shift"
+    @property
     def width(self):
         return int(config.width * self.scale)
     @property
@@ -426,25 +429,32 @@ class FramePlotter(api.FramePlotter):
                 y2 += 1
             w, h = x2 - x, y2 - y
             # Make sure the window stops at the screen border.
+            keep_image_sizes = self.crop_mode == "shift"
+
             if x < 0:
-                x2 -= x - 0
+                if keep_image_sizes:
+                    x2 -= x - 0
                 x = 0
             if x2 > image.shape[0] - 1:
-                x -= x2 - (image.shape[0] - 1)
+                if keep_image_sizes:
+                    x -= x2 - (image.shape[0] - 1)
                 x2 = image.shape[0] - 1
             if y < 0:
-                y2 -= y - 0
+                if keep_image_sizes:
+                    y2 -= y - 0
                 y = 0
             if y2 > image.shape[1] - 1:
-                y -= y2 - (image.shape[1] - 1)
+                if keep_image_sizes:
+                    y -= y2 - (image.shape[1] - 1)
                 y2 = image.shape[1] - 1
             if is_plotting_required:
                 ax.set_xlim((y, y2))
                 ax.set_ylim((x, x2))
             else:
                 image = image[x:x2, y:y2]
-            assert (x2 - x) == w
-            assert (y2 - y) == h
+            if keep_image_sizes:
+                assert (x2 - x) == w
+                assert (y2 - y) == h
         elif is_plotting_required:
             # Make sure that the plot is cropped at the image's bounds.
             ax.set_xlim((0, image.shape[1]))

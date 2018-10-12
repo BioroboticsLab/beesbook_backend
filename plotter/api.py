@@ -57,6 +57,7 @@ class FramePlotter(_ObjectRequester):
     _title = None            # Text to plot in the upper left corner.
     _scale = None            # Resizing of the image prior to plotting.
     _crop_coordinates = None # Allows displaying only a small part of the image.
+    _crop_mode = None        # Default "shift": keep cropping region valid, "crop": crop out smaller image at border.
     _path_alpha = None       # The base transparency of the paths.
     _raw = None              # Requests a near-lossless image without plotting.
     _no_rotate = None        # The image won't be rotated to hive coordinates (use with raw=True).
@@ -80,6 +81,8 @@ class FramePlotter(_ObjectRequester):
             title: Text that will be displayed in the image (or "auto" for automatic title).
             scale: Factor to resize the returned image (default = 0.5).
             crop_coordinates: Image pixel coordinates of the region to crop.
+            crop_mode: "shift": Cropping regions that are out of the image bounds will be shifted (default),
+                        "crop": Crops at the image border will yield smaller subimages.
             path_alpha: Opacity of the traced tracks (default = 0.25).
             raw: Whether to return the raw image data as a numpy array without compressing it to JPEG.
             no_rotate: Only with raw=True. Whether to return the image in the original (camera) orientation.
@@ -94,7 +97,7 @@ class FramePlotter(_ObjectRequester):
         """
         for property in ("xs", "ys",
                          "angles", "sizes", "colors", "labels",
-                         "frame_id", "title", "scale", "crop_coordinates",
+                         "frame_id", "title", "scale", "crop_coordinates", "crop_mode",
                          "path_alpha", "raw", "no_rotate", "decode_all_frames", "decode_n_frames"):
             if property not in args:
                 continue
@@ -102,6 +105,9 @@ class FramePlotter(_ObjectRequester):
         
         if self._no_rotate and not self._raw:
             raise ValueError("no_rotate=True requires raw=True.")
+        if self._crop_mode:
+            if self._crop_mode not in ("shift", "crop"):
+                raise ValueError("crop_mode must be one of 'shift', 'crop'.")
     
     @classmethod
     def from_dict(cls, data):
@@ -127,6 +133,7 @@ class FramePlotter(_ObjectRequester):
             yield "title", self._title
             yield "scale", self._scale
             yield "crop_coordinates", self._crop_coordinates
+            yield "crop_mode", self._crop_mode
             yield "path_alpha", self._path_alpha
             yield "raw", self._raw
             yield "no_rotate", self._no_rotate
