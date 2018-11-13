@@ -6,10 +6,13 @@ import shutil
 import copy
 import multiprocessing
 import math
+import skimage.draw
 
 matplotlib.use('Agg')  # need to be executed before pyplot import, deactivates showing of plot in ipython
 import matplotlib.pyplot as plt
 import matplotlib.patheffects
+import matplotlib.colors
+
 import numpy as np
 from PIL import Image
 
@@ -343,12 +346,12 @@ class FramePlotter(api.FramePlotter):
         format = self.requested_file_format().upper()
         image = plt.imread(buffer, format=format)
         image = np.swapaxes(image, 0, 1)
-
+        
         # To be able to specify a size independent of the resolution.
         if self.crop_coordinates: # Note that X and Y are swapped.
             x, y, x2, y2 = self.crop_coordinates
-            width = y2 - y
-            height = x2 - x
+            width = abs(y2 - y)
+            height = abs(x2 - x)
         else:
             width = image.shape[1]
             height = image.shape[0]
@@ -418,7 +421,16 @@ class FramePlotter(api.FramePlotter):
             if self.title is not None:
                 txt = plt.text(0.1, 0.9, self.title, size=int(108 / width_factor), color='white', transform=ax.transAxes, horizontalalignment='left')
                 txt.set_path_effects([matplotlib.patheffects.withStroke(linewidth=5, foreground='k')])
-        
+        else:
+            # No fancy plotting required - RAW mode.
+            # We still provide basic circle functionality.
+            if self.xs is not None and self.ys is not None:
+                image.setflags(write=1)
+                for (_x, _y, _r, _c) in zip (self.xs, self.ys, self.sizes, self.colors):
+                    rr, cc = skimage.draw.circle(_x, _y, self.scale * _r, shape=image.shape)
+                    color = matplotlib.colors.to_rgba(_c)
+                    # Assume the provided color is some sort of gray.
+                    image[rr, cc] = color[0] * 255
         if self.crop_coordinates is not None:
             x, y, x2, y2 = self.crop_coordinates
             # Make sure the width/height is divisible by two.
@@ -430,7 +442,6 @@ class FramePlotter(api.FramePlotter):
             w, h = x2 - x, y2 - y
             # Make sure the window stops at the screen border.
             keep_image_sizes = self.crop_mode == "shift"
-
             if x < 0:
                 if keep_image_sizes:
                     x2 -= x - 0
