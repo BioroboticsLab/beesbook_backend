@@ -108,7 +108,9 @@ class FramePlotter(_ObjectRequester):
         if self._crop_mode:
             if self._crop_mode not in ("shift", "crop"):
                 raise ValueError("crop_mode must be one of 'shift', 'crop'.")
-    
+        if self._frame_id is not None:
+            self._frame_id = int(self._frame_id)
+            
     @classmethod
     def from_dict(cls, data):
         return cls(**data)
