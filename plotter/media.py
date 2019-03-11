@@ -375,8 +375,8 @@ class FramePlotter(api.FramePlotter):
                     rotations = np.array([rotate_direction_vec(rot, self.scale) for rot in self.angles]) * 10.0
                     ax.quiver(self.ys, self.xs, rotations[:, 1], rotations[:, 0], scale=0.45 / self.scale, color=self.colors, units='xy', alpha=0.5)
             
-                for unique_color in np.unique(self.colors):
-                    idx = self.colors == unique_color
+                for unique_color in np.unique(self.colors, axis=0):
+                    idx = np.all(self.colors == unique_color, axis=1)
 
                     # Draw scatterplot if radius is given.
                     if self.sizes is not None:
