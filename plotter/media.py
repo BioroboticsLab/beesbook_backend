@@ -247,9 +247,6 @@ class FramePlotter(api.FramePlotter):
         return self._angles
     @property
     def sizes(self):
-        if self._sizes is None:
-            return None
-            self._sizes = np.array(self._sizes) / self.scale
         return self._sizes
     @property
     def colors(self):
