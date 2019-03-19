@@ -216,7 +216,10 @@ class FramePlotter(api.FramePlotter):
         super(FramePlotter, self).__init__(**args)
 
         if self._colors is not None:
-            self._colors = np.array(self._colors)
+            if type(self._colors) is list:
+                self._colors = np.array(self._colors)
+                if self._colors.ndim == 1:
+                    self._colors = self._colors.reshape(-1, 1)
         if self._labels is not None:
             self._labels = np.array(self._labels)
 
@@ -250,8 +253,12 @@ class FramePlotter(api.FramePlotter):
         return self._sizes
     @property
     def colors(self):
-        if self._colors is None:
-            self._colors = np.array(["yellow"] * self.xs.shape[0])
+        if type(self._colors) is str or type(self._colors) is tuple:
+            N = self.xs.shape[0]
+            self._colors = np.array([self._colors] * N).reshape(N, 1)
+        elif self._colors is None:
+            N = self.xs.shape[0]
+            self._colors = np.array(["yellow"] * N).reshape(N, 1)
         return self._colors
     @property
     def labels(self):
@@ -376,8 +383,9 @@ class FramePlotter(api.FramePlotter):
                     ax.quiver(self.ys, self.xs, rotations[:, 1], rotations[:, 0], scale=0.45 / self.scale, color=self.colors, units='xy', alpha=0.5)
             
                 for unique_color in np.unique(self.colors, axis=0):
-                    idx = np.all(self.colors == unique_color, axis=1)
-
+                    idx = np.all(self.colors == unique_color, axis=1).flatten()
+                    if unique_color.shape[0] == 1:
+                        unique_color = unique_color[0]
                     # Draw scatterplot if radius is given.
                     if self.sizes is not None:
                         radius = np.array(self.sizes)
